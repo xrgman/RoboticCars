@@ -1,0 +1,4 @@
+r
+loadfile .pio/build/nucleo_f767zi/firmware.elf
+r
+q
