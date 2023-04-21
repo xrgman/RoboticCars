@@ -1,22 +1,37 @@
 #include "serialcomm.h"
 
+void on_rx_interrupt() {
+    serial_conn->processReceivedCharacter();
+}
 
-/*
-    Called on RX received thingy :)
-*/
-// void on_rx_interrupt() 
-// {
-//     char c;
-
-//     // Read the data to clear the receive interrupt.
-//     // if (SerialComm::serial_connection->read(&c, 1)) {
-//     //     // Echo the input back to the terminal.
-//     //     SerialComm::serial_connection->write(&c, 1);
-//     // }
-// }
-
-void SerialComm::processReceivedCharacter(char c, Callback<void(uint8_t msg[], uint8_t size)> command_callback)
+SerialComm::SerialComm(PinName tx, PinName rx) : serial_connection(tx, rx)
 {
+    this->rxPin = rx;
+    this->txPin = tx;
+
+    serial_conn = this;
+}
+
+void SerialComm::initialize(Callback<void(uint8_t msg[], uint8_t size)> command_callback)
+{
+    this->command_callback = command_callback;
+
+    serial_connection.attach(&on_rx_interrupt, SerialBase::RxIrq);
+}
+
+
+
+
+void SerialComm::processReceivedCharacter()
+{
+    //Retreiving character:
+    char c;
+
+    // Read the data to clear the receive interrupt.
+    if (!serial_connection.read(&c, 1)) {
+       return;
+    }
+
     if(receiving_data.status == msgStatus::IDLE && c == '?') {
         receiving_data.status = msgStatus::RECEIVING;
     }
@@ -39,18 +54,5 @@ void SerialComm::processReceivedCharacter(char c, Callback<void(uint8_t msg[], u
         receiving_data.msg[receiving_data.idx] = c;
         receiving_data.idx++;
     }
-
-    //this->serial_connection->write(&c, 1);
 }
 
-void SerialComm::initialize()
-{
-    //TODO: fix this
-    //this->serial_connection->attach(&on_rx_interrupt, SerialBase::RxIrq);
-}
-
-SerialComm::SerialComm(PinName tx, PinName rx) : serial_connection(tx, rx)
-{
-    this->rxPin = rx;
-    this->txPin = tx;
-}

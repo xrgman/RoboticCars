@@ -24,19 +24,16 @@ typedef struct {
 class SerialComm {
     public: 
         SerialComm(PinName rx, PinName tx);
-        void initialize();
-        void processReceivedCharacter(char c, Callback<void(uint8_t msg[], uint8_t size)> command_callback);
-
-        //For now, should become private:
-        UnbufferedSerial serial_connection; 
+        void initialize(Callback<void(uint8_t msg[], uint8_t size)> command_callback);
+        void processReceivedCharacter();
     private:
         PinName rxPin, txPin;
         ReceivingData receiving_data;
-
-        
-
-        //void on_rx_interrupt();
+        UnbufferedSerial serial_connection; 
+        Callback<void(uint8_t msg[], uint8_t size)> command_callback;
 };
+
+static SerialComm *serial_conn;
 
 
 #endif //SERIALCOMM_H

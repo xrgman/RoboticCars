@@ -12,6 +12,7 @@
 
 #define WAIT_TIME_MS 100
 
+//Queue to enable printf in ISR:
 EventQueue queue(32 * EVENTS_EVENT_SIZE);
 
 DigitalOut led1(PG_2);
@@ -25,39 +26,39 @@ SerialComm uart1(USBTX, USBRX);
 //DRV8908 motor chip:
 DRV8908 drv8908(DRV8908_MOSI_PIN, DRV8908_MISO_PIN, DRV8908_SCK_PIN, DRV8908_NSS_PIN, DRV8908_SLEEP_PIN, DRV8908_FAULT_PIN);
 
-void tes() {
-    while(true) {
-        printf("serial\r\n");
-        thread_sleep_for(WAIT_TIME_MS);
-    } 
-}
-
 void printFault() {
     printf("Printing out fault information:\n\n");
     drv8908.PrintErrorStatus();
 }
 
-void command_callback(uint8_t command[], uint8_t size) {
-    uart1.serial_connection.write("Received: ", 10);
-    uart1.serial_connection.write(command, size);
-    uart1.serial_connection.write("\n", 1);
+void printTest() {
+    uint8_t address = 0x03;
+    uint16_t readMessage = DRV8908_READ_ADDRESS | (address << 8);
+   
+    //printf("Result: %x\n", readMessage);
 
-    if(size >= 1 && command[0] == 'p') {
-        queue.call(printFault);
-    } 
+    drv8908.Test();
 }
 
-void on_rx_interrupt() 
-{
-    char c;
+void command_callback(uint8_t command[], uint8_t size) {
+    // uart1.serial_connection.write("Received: ", 10);
+    // uart1.serial_connection.write(command, size);
+    // uart1.serial_connection.write("\n", 1);
 
-    // Read the data to clear the receive interrupt.
-    if (uart1.serial_connection.read(&c, 1)) {
-        uart1.processReceivedCharacter(c, command_callback);
+    if(size >= 1) {
+        switch(command[0]) {
+            case 'p':
+                queue.call(printFault);
+                break;
+            case 't':
+                queue.call(printTest);
+                break;
+            default:
+                break;
+        }
+        
     }
 }
-
-
 
 int main()
 {
@@ -68,8 +69,7 @@ int main()
     eventThread2.start(callback(&queue, &EventQueue::dispatch_forever));
 
     //Intializing serial connection:
-    uart1.initialize();
-    uart1.serial_connection.attach(&on_rx_interrupt, SerialBase::RxIrq); //TODO: remove
+    uart1.initialize(command_callback);
 
     //Initializing DRV8908 chip:
     drv8908.Initialize();
