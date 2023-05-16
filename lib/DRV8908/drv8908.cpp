@@ -7,7 +7,7 @@ DRV8908::DRV8908(PinName mosi, PinName miso, PinName sck, PinName nss, PinName s
 {
     //Empty constructor :)
 }
-
+//MAYBE USE LOGIC ANALYZER
 void DRV8908::Initialize()
 {
     //Enable the chip, by setting the sleep pin to high:
@@ -22,19 +22,27 @@ void DRV8908::Initialize()
     spi.frequency(DRV8908_SPI_FREQ);
 
     //Disabling open load detection:
-    WriteByte(DRV8908_OLD_CTRL_1, 0b11111111);
+    WriteByte(DRV8908_OLD_CTRL_1, 0b11111110);
 }
 
 /// @brief Checks if the device id is 010 (DRV8908)
 void DRV8908::CheckDeviceOperation() {
-    
-    
+    //Clearing faults:
+    WriteByte(DRV8908_CONFIG_CTRL, 0b00000001);
+
     //Reading status register:
     uint16_t data = ReadByte(DRV8908_CONFIG_CTRL);
 
     //printf("\nTry nr 1:\n");
     printf("\nReceived in hex: 0x%x\r\n", data);
     printf("Received in binary: ");
+    Util::PrintAsBinary(data);
+
+    data = ReadByte(DRV8908_OLD_CTRL_1);
+
+    //printf("\nTry nr 1:\n");
+    printf("\nReceived in hex 2: 0x%x\r\n", data);
+    printf("Received in binary 2: ");
     Util::PrintAsBinary(data);
 
     //Pulling chip select low, selecting the device:
@@ -155,13 +163,19 @@ uint16_t DRV8908::ReadByte(uint8_t address)
     //Creating read message command for specified address:
     uint16_t command = DRV8908_READ_ADDRESS | (address << 8);
 
+    spi.lock();
     chip_select.write(0);
     thread_sleep_for(10);
 
+    spi.frequency(DRV8908_SPI_FREQ);
+    thread_sleep_for(10);
+
     spi.write(command);
+    uint16_t data = spi.write(0x0000);
 
     thread_sleep_for(10);
     chip_select.write(1);
+    spi.unlock();
 
     // thread_sleep_for(10);
 

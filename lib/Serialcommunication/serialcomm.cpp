@@ -1,58 +1,30 @@
 #include "serialcomm.h"
 
-void on_rx_interrupt() {
-    serial_conn->processReceivedCharacter();
-}
-
 SerialComm::SerialComm(PinName tx, PinName rx) : serial_connection(tx, rx)
 {
     this->rxPin = rx;
     this->txPin = tx;
-
-    serial_conn = this;
 }
 
-void SerialComm::initialize(Callback<void(uint8_t msg[], uint8_t size)> command_callback)
+void SerialComm::initialize(Callback<void(uint8_t)> on_received) {
+    this->on_received = on_received;
+
+    serial_connection.attach(callback(this, &SerialComm::interuptReceived), SerialBase::RxIrq);
+}
+
+void SerialComm::sendByte(uint8_t byte) {
+    serial_connection.write(&byte, 1);
+}
+
+void SerialComm::interuptReceived()
 {
-    this->command_callback = command_callback;
+    //Read received data:
+    uint8_t received;
 
-    serial_connection.attach(&on_rx_interrupt, SerialBase::RxIrq);
+    if(!serial_connection.read(&received, 1)) {
+        return;
+    }
+
+    //Calling top level function to process received byte:
+    on_received(received);
 }
-
-
-
-
-void SerialComm::processReceivedCharacter()
-{
-    //Retreiving character:
-    char c;
-
-    // Read the data to clear the receive interrupt.
-    if (!serial_connection.read(&c, 1)) {
-       return;
-    }
-
-    if(receiving_data.status == msgStatus::IDLE && c == '?') {
-        receiving_data.status = msgStatus::RECEIVING;
-    }
-    else if(receiving_data.status == msgStatus::RECEIVING) {
-        if(c == '\n') {
-            //Processing message:
-            // serial_connection.write("Received: ", 10);
-            // serial_connection.write(receiving_data.msg, receiving_data.idx);
-            // serial_connection.write("\n", 1);
-
-            command_callback(receiving_data.msg, receiving_data.idx);
-
-            //Resetting buffer:
-            receiving_data.status = msgStatus::IDLE;
-            receiving_data.idx = 0;
-
-            return;
-        }
-        
-        receiving_data.msg[receiving_data.idx] = c;
-        receiving_data.idx++;
-    }
-}
-

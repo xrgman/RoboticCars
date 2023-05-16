@@ -6,11 +6,13 @@
 #include <string>
 
 #include "mbed.h"
+#include "pinDefinitions.h"
 #include "sensor.h"
-#include "serialcomm.h"
+#include "communication.h"
 #include "drv8908.h"
 #include "mpu9250.h"
 #include "ak8963.h"
+#include "hcsr04.h"
 
 #define WAIT_TIME_MS 100
 
@@ -22,8 +24,8 @@ DigitalOut led2(PG_4);
 DigitalOut led3(PG_3);
 DigitalOut led4(PG_5);
 
-//Uart communication:
-SerialComm uart1(USBTX, USBRX);
+//Communication:
+Communication comm(Communication::SERIAL);
 
 //DRV8908 motor chip:
 DRV8908 drv8908(DRV8908_MOSI_PIN, DRV8908_MISO_PIN, DRV8908_SCK_PIN, DRV8908_NSS_PIN, DRV8908_SLEEP_PIN, DRV8908_FAULT_PIN);
@@ -34,6 +36,10 @@ MPU9250 mpu9250(MPU9250_SCL, MPU9250_SDA, MPU9250_INT);
 //AK8963 magnetometer:
 AK8963 ak8963(AK8963_SCL, AK8963_SDA);
 
+//Ultrasonic sensors:
+HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER, ULTRASONIC_FRONT_ECHO);
+HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER, ULTRASONIC_RIGHT_ECHO);
+
 //I2C i2c(MPU9250_SDA, MPU9250_SCL);
 
 void printFault() {
@@ -42,12 +48,8 @@ void printFault() {
 }
 
 void printTest() {
-   // uint8_t address = 0x03;
-    //uint16_t readMessage = DRV8908_READ_ADDRESS | (address << 8);
-   
-    //printf("Result: %x\n", readMessage);
-
-    drv8908.Test();
+    comm.sendDebugMessage("HOOI\n");
+    // drv8908.Test();
 }
 
 int ack;   
@@ -63,22 +65,24 @@ int address;
 //   } 
 // }
 
-void command_callback(uint8_t command[], uint8_t size) {
-    // uart1.serial_connection.write("Received: ", 10);
-    // uart1.serial_connection.write(command, size);
-    // uart1.serial_connection.write("\n", 1);
-
-    if(size >= 1) {
-        switch(command[0]) {
-            case 'p':
-                queue.call(printFault);
-                break;
-            case 't':
-                queue.call(printTest);
-                break;
-            default:
-                break;
-        }
+void command_callback(messageType type, uint8_t size, uint8_t command[]) {
+    switch(type) {
+        case TEST: //Used for printing test information:
+            if(size >= 1) {
+                switch(command[0]) {
+                    case 'p':
+                        queue.call(printFault);
+                        break;
+                    case 't':
+                        queue.call(printTest);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        default:
+            break;
     }
 }
 
@@ -95,7 +99,7 @@ void checkHardwareConnections() {
 
     //DRV8908:
     printf("\n***** Checking sensor DRV8908 *****\r\n");
-    drv8908.CheckDeviceOperation();
+    //drv8908.CheckDeviceOperation();
 }
 
 int main()
@@ -107,16 +111,16 @@ int main()
     eventThread2.start(callback(&queue, &EventQueue::dispatch_forever));
 
     //Intializing serial connection:
-    uart1.initialize(command_callback);
-
-    //Initializing DRV8908 chip:
-    drv8908.Initialize();
+    comm.initialize(command_callback);
 
     //Initializing MPU9250 chip:
     mpu9250.Initialize(MPU9250::GFS_250DPS, MPU9250::AFS_2G);
 
     //Initializig AK8963:
     ak8963.Initialize(AK8963::MFS_16BITS, AK8963::MOP_CONINUES_2);
+
+    //Initializing DRV8908 chip:
+    //drv8908.Initialize();
 
     //Checking if all hardware is connected and functioning properly:
     checkHardwareConnections();
@@ -132,7 +136,17 @@ int main()
         //     ak8963.PrintSensorReadings();
         // }
 
-        drv8908.CheckDeviceOperation();
+        //drv8908.CheckDeviceOperation();
+
+        //ultrasonicFront.startMeasurement();
+        //ultrasonicRight.startMeasurement();
+
+        //while(!ultrasonicFront.isNewDataReady());
+        
+
+        //printf("Distances, front: %d cm, right: NO cm\n", ultrasonicFront.getDistanceCm());
+
+      
 
         led1 = !led1;
         thread_sleep_for(WAIT_TIME_MS);

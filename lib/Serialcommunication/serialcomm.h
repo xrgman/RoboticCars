@@ -4,36 +4,21 @@
 #include <stdlib.h>
 #include <string>
 #include "mbed.h"
+#include "communicationinterface.h"
 
 #define BUF_SIZE 50
 
-//TODO: Desing protocol and use message length
-typedef enum 
-{ 
-	IDLE, //State when not receiving a message
-    START, //State after receiving start character ('?')
-    RECEIVING //State during the reception of characters (up until end char ('\n'))
-} msgStatus;
-
-typedef struct {
-    msgStatus status;
-    uint8_t msg[BUF_SIZE];
-	uint8_t idx;
-} ReceivingData;
-
-class SerialComm {
+class SerialComm : ICommunication {
     public: 
         SerialComm(PinName rx, PinName tx);
-        void initialize(Callback<void(uint8_t msg[], uint8_t size)> command_callback);
-        void processReceivedCharacter();
+        void initialize(Callback<void(uint8_t)> on_received);
+        void sendByte(uint8_t byte);
+        void interuptReceived();
+
     private:
         PinName rxPin, txPin;
-        ReceivingData receiving_data;
         UnbufferedSerial serial_connection; 
-        Callback<void(uint8_t msg[], uint8_t size)> command_callback;
+        Callback<void(uint8_t)> on_received;
 };
-
-static SerialComm *serial_conn;
-
 
 #endif //SERIALCOMM_H
