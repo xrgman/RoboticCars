@@ -36,14 +36,14 @@ void DRV8908::CheckDeviceOperation() {
     //printf("\nTry nr 1:\n");
     printf("\nReceived in hex: 0x%x\r\n", data);
     printf("Received in binary: ");
-    Util::PrintAsBinary(data);
+    Util::printAsBinary(data);
 
     data = ReadByte(DRV8908_OLD_CTRL_1);
 
     //printf("\nTry nr 1:\n");
     printf("\nReceived in hex 2: 0x%x\r\n", data);
     printf("Received in binary 2: ");
-    Util::PrintAsBinary(data);
+    Util::printAsBinary(data);
 
     //Pulling chip select low, selecting the device:
     //spi.select();

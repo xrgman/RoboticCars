@@ -28,12 +28,14 @@
 #define AK8963_SCL_PIN PF_1
 #define AK8963_SDA_PIN PF_0
 
-//***** MPU9250 *****
+//***** MPU9250 pins *****
 #define MPU9250_SCL_PIN PF_1
 #define MPU9250_SDA_PIN PF_0
 #define MPU9250_INT_PIN PF_2
 
-
+//***** UART pins *****
+#define SERIAL_TX_PIN USBTX
+#define SERIAL_RX_PIN USBRX
 
 
 

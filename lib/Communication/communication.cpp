@@ -1,8 +1,9 @@
 #include "communication.h"
+#include "pinDefinitions.h"
 
 /// @brief Constructor.
 /// @param communicationState Set the default communication method upon initialisation.
-Communication::Communication(communicationState communicationState) : serialCommunication(SERIAL_TX, SERIAL_RX) {
+Communication::Communication(communicationState communicationState) : serialCommunication(SERIAL_TX_PIN, SERIAL_RX_PIN) {
     currentCommState = communicationState;
 }
 
@@ -21,13 +22,13 @@ void Communication::setCommunicationState(communicationState newState) {
     //Check whether communicationmethod is implemented: 
     switch(newState) {
         case BLUETOOTH:
-            sendDebugMessage("Communication state 'BLUETOOTH' is not implemented.");
+            sendDebugMessage("Communication state 'BLUETOOTH' is not implemented.\n");
             break;
         case WIFI:
-            sendDebugMessage("Communication state 'WIFI' is not implemented.");
+            sendDebugMessage("Communication state 'WIFI' is not implemented.\n");
             return;
         default:
-            sendDebugMessage("Unable to change communication state, state does not exist.");
+            sendDebugMessage("Unable to change communication state, state does not exist.\n");
             return;
     }
 }

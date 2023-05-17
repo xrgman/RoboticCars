@@ -7,6 +7,7 @@
 
 #include "mbed.h"
 #include "pinDefinitions.h"
+#include "statemachine.h"
 #include "sensor.h"
 #include "communication.h"
 #include "drv8908.h"
@@ -16,13 +17,20 @@
 
 #define WAIT_TIME_MS 100
 
+//Function definitions:
+void state_changed_callback(Statemachine::State, Statemachine::State);
+
 //Queue to enable printf in ISR:
 EventQueue queue(32 * EVENTS_EVENT_SIZE);
 
+//The four leds of the robot:
 DigitalOut led1(LED_1_PIN);
 DigitalOut led2(LED_2_PIN);
 DigitalOut led3(LED_3_PIN);
 DigitalOut led4(LED_4_PIN);
+
+//Statemachine:
+Statemachine statemachine(state_changed_callback);
 
 //Communication:
 Communication comm(Communication::SERIAL);
@@ -52,19 +60,6 @@ void printTest() {
     // drv8908.Test();
 }
 
-int ack;   
-int address; 
-
-// void scanI2C() {
-//   for(address=1;address<127;address++) {    
-//     ack = i2c.write(address << 1, NULL, 0);
-//     if (ack == 0) {
-//         printf("I2C device found at address 0x%02X (0x%02X in 8-bit)\n", address, address << 1);
-//     }    
-//     thread_sleep_for(0.05);
-//   } 
-// }
-
 void command_callback(messageType type, uint8_t size, uint8_t command[]) {
     switch(type) {
         case TEST: //Used for printing test information:
@@ -84,6 +79,13 @@ void command_callback(messageType type, uint8_t size, uint8_t command[]) {
         default:
             break;
     }
+}
+
+/// @brief Called when state is changed, can be used to execute certain actions based on the previous and new states.
+/// @param oldState 
+/// @param newState 
+void state_changed_callback(Statemachine::State oldState, Statemachine::State newState) {
+
 }
 
 void checkHardwareConnections() {
@@ -155,12 +157,16 @@ int main()
     //Checking if all hardware is connected and functioning properly:
     //checkHardwareConnections();
 
-    //ultrasonicRight.startMeasurement();
-     float Distance;                                            //Assign a local variable for the main function
+    //ultrasonicRight.startMeasurement();+
+    //float Distance;                                            //Assign a local variable for the main function
      //pulse.start();
 
-    while (true)
-    {
+     while (true)
+     {
+        statemachine.getCurrentState();
+
+        thread_sleep_for(5000);
+
         //drv8908.Test();
         //mpu9250.Test();
         //checkHardwareConnections();

@@ -1,6 +1,6 @@
 #include "util.h"
 
-void Util::PrintAsBinary(int number) {
+void Util::printAsBinary(int number) {
     uint32_t n;
 
     if(number <= 0b1111) {
@@ -43,4 +43,20 @@ void Util::PrintAsBinary(int number) {
     }
 
     printf("\r\n");
+}
+
+void Util::scanForI2CDevices(PinName sda, PinName scl) {
+    int ack;   
+    int address;
+    I2C i2c(sda, scl);
+
+    for(address=1;address<127;address++) {    
+        ack = i2c.write(address << 1, NULL, 0);
+
+        if (ack == 0) {
+            printf("I2C device found at address 0x%02X (0x%02X in 8-bit)\n", address, address << 1);
+        }    
+
+        thread_sleep_for(0.05);
+    }   
 }

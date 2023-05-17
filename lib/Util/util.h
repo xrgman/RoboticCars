@@ -5,7 +5,8 @@
 
 class Util {
     public:
-        static void PrintAsBinary(int number);
+        static void printAsBinary(int number);
+        static void scanForI2CDevices(PinName sda, PinName scl);
 };
 
 #endif

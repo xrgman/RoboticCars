@@ -4,9 +4,6 @@
 #include "mbed.h"
 #include "serialcomm.h"
 
-#define SERIAL_TX USBTX
-#define SERIAL_RX USBRX
-
 typedef enum
 {
     DEBUG = 0,
