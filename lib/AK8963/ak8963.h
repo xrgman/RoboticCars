@@ -4,10 +4,6 @@
 #include "mbed.h"
 #include "sensor.h"
 
-//***** Pin definitions *****
-#define AK8963_SCL PF_1
-#define AK8963_SDA PF_0
-
 //***** Address of MPU9250 *****
 #define AK8963_ADDRESS 0x0C<<1 //Shifter left by one because mbed uses 8 bit addresses :)
 

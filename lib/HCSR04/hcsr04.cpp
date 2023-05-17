@@ -6,6 +6,21 @@
 HCSR04::HCSR04(PinName triggerPin, PinName echoPin) : trigger(triggerPin), echo(echoPin) {
     //Initializing trigger to low state:
     trigger.write(0);
+    echo.mode(PullUp);
+}
+
+/// @brief Constructer with debugging enabled, intializes the trigger and echo outputs.
+/// @param triggerPin The trigger pin.
+/// @param echoPin The echo pin.
+/// @param communication_protocol Reference to the commonication_protocol, used to relay messages to host.
+HCSR04::HCSR04(PinName triggerPin, PinName echoPin, Communication *communication_protocol) : trigger(triggerPin), echo(echoPin) {
+    //Initializing trigger to low state:
+    trigger.write(0);
+    echo.mode(PullUp);
+    echo.enable_irq();
+
+    useCommunication = true;
+    communication = communication_protocol;
 }
 
 /// @brief Start the distance measurement, needs to be called at the start.
@@ -14,12 +29,11 @@ void HCSR04::startMeasurement() {
     trigger.write(1);
 
     //Attaching interrupts:
-    triggerTimeOut.attach_us(callback(this, &HCSR04::disableTrigger), 10); //Run trigger for 10us
+    triggerTimeOut.attach(callback(this, &HCSR04::disableTrigger), 10us); //Run trigger for 10us
     //echoTimeOut.attach_us()
     echo.rise(callback(this, &HCSR04::onEchoRise)); //Event called upon receiving first wave back
     
-
-    //Marking data as not new:
+    // Marking data as not new:
     newDataReady = false;
 }
 
@@ -48,10 +62,15 @@ int HCSR04::getDistanceInch() {
 /// @brief Called after trigger time elapsed, turns trigger signal low.
 void HCSR04::disableTrigger() {
     trigger.write(0);
+
+    if(useCommunication) {
+        communication->sendDebugMessage("Trigger disabled\n");
+    }
 }
 
+/// @brief Called when a rise in the echo signal is detected.
 void HCSR04::onEchoRise() {
-    //printf("Rise\n");
+    printf("BABABA\n");
     if (!timerStarted)
     {
         timerStarted = true;
@@ -64,6 +83,10 @@ void HCSR04::onEchoRise() {
 
         //Disabling rise event callback:
         echo.rise(NULL);
+    }
+
+    if(useCommunication) {
+        communication->sendDebugMessage("Echo rise event triggered\n");
     }
 }
 
@@ -82,4 +105,8 @@ void HCSR04::onEchoFall() {
     timer.reset();
     timerStarted = false;
     echo.fall(NULL);
+
+    if(useCommunication) {
+        communication->sendDebugMessage("Echo fall event triggered\n");
+    }
 }
