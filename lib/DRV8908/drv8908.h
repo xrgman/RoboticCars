@@ -14,21 +14,29 @@
 
 class DRV8908 : ISensor {
     public:
+        enum DeviceId {
+            drv8912 = 0,
+            drv8910,
+            drv8908,
+            drv8906,
+            drv8904
+        };
+
         DRV8908(PinName mosi, PinName miso, PinName sck, PinName nss, PinName sleep, PinName fault);
-        void Initialize();
-        void CheckDeviceOperation();
-        void PrintSensorReadings();
-        void Reset();
-        void PrintErrorStatus();
-        void Test();
+        void initialize();
+        void checkDeviceOperation(Communication *communication_protocol);
+        void printSensorReadings();
+        void reset();
+        void printErrorStatus();
+        void test();
     private:
         SPI spi;
         DigitalOut chip_select;
         DigitalOut sleep_pin;
         DigitalIn fault_pin;
 
-        void WriteByte(uint8_t address, uint8_t data);
-        uint16_t ReadByte(uint8_t address);
+        void writeByte(uint8_t address, uint8_t data);
+        uint16_t readByte(uint8_t address);
 };
 
 #endif

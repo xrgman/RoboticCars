@@ -4,9 +4,7 @@
 /// @param triggerPin The trigger pin.
 /// @param echoPin The echo pin.
 HCSR04::HCSR04(PinName triggerPin, PinName echoPin) : trigger(triggerPin), echo(echoPin) {
-    //Initializing trigger to low state:
-    trigger.write(0);
-    echo.mode(PullUp);
+    initialize();
 }
 
 /// @brief Constructer with debugging enabled, intializes the trigger and echo outputs.
@@ -14,13 +12,20 @@ HCSR04::HCSR04(PinName triggerPin, PinName echoPin) : trigger(triggerPin), echo(
 /// @param echoPin The echo pin.
 /// @param communication_protocol Reference to the commonication_protocol, used to relay messages to host.
 HCSR04::HCSR04(PinName triggerPin, PinName echoPin, Communication *communication_protocol) : trigger(triggerPin), echo(echoPin) {
-    //Initializing trigger to low state:
-    trigger.write(0);
-    echo.mode(PullUp);
-    echo.enable_irq();
+    initialize();
 
     useCommunication = true;
     communication = communication_protocol;
+}
+
+/// @brief Initializes thes sensor.
+void HCSR04::initialize() {
+    //Initializing trigger to low state:
+    trigger.write(0);
+    //echo.mode(PullUp);
+
+    echo.rise(callback(this, &HCSR04::onEchoRise)); //Event called upon receiving first wave back.
+    echo.fall(callback(this, &HCSR04::onEchoFall)); //Event called upon ending of waves.
 }
 
 /// @brief Start the distance measurement, needs to be called at the start.
@@ -31,8 +36,7 @@ void HCSR04::startMeasurement() {
     //Attaching interrupts:
     triggerTimeOut.attach(callback(this, &HCSR04::disableTrigger), 10us); //Run trigger for 10us
     //echoTimeOut.attach_us()
-    echo.rise(callback(this, &HCSR04::onEchoRise)); //Event called upon receiving first wave back
-    
+
     // Marking data as not new:
     newDataReady = false;
 }
@@ -49,6 +53,45 @@ int HCSR04::getDistanceCm() {
     newDataReady = false;
 
     return pulseDuration / 58;
+}
+
+/// @brief Blocking way of receiving the distance.
+/// @return The distance measured in cm.
+float HCSR04::getDistanceCmBlocking() {
+    int echoStart = 0, echoEnd = 0, echoPulseWidth = 0;
+
+    //Generate signal trigger:
+    trigger.write(1);
+    wait_us(10);                                              
+    trigger.write(0);
+
+    timer.reset();
+    timer.start();
+
+    //Waiting for rise:
+    while(echo.read() == 0) {
+        //Timeout:
+        if(echoStart >= 2500) {
+            if(useCommunication) {
+                communication->sendDebugMessage("Rise event was never detected, timed out.\n");
+            }
+
+            break;
+        }
+
+        echoStart = timer.elapsed_time().count();
+    }
+
+    //Waiting for fall:
+    while(echo.read() == 1 && (echoEnd - echoStart < 25000)) {
+        echoEnd =  timer.elapsed_time().count(); 
+    }
+
+    echoPulseWidth = echoEnd - echoStart;
+
+    timer.stop();
+
+    return (float)echoPulseWidth/5.8f;
 }
 
 /// @brief Get the measured distance in inch.
@@ -70,20 +113,28 @@ void HCSR04::disableTrigger() {
 
 /// @brief Called when a rise in the echo signal is detected.
 void HCSR04::onEchoRise() {
-    printf("BABABA\n");
-    if (!timerStarted)
-    {
-        timerStarted = true;
+    // if (!timerStarted)
+    // {
+    //     timerStarted = true;
 
-        //Starting timer:
-        timer.start();
+    //     //Starting timer:
+    //     timer.start();
 
-        //Ataching fall event:
-        echo.fall(callback(this, &HCSR04::onEchoFall));
+    //     //Disabling rise event callback:
+    //     //echo.rise(NULL);
 
-        //Disabling rise event callback:
-        echo.rise(NULL);
-    }
+    //     while(echo.read() != 0);
+
+    //      // Disabling timer:
+    //     timer.stop();
+
+    //     pulseDuration = timer.read();
+    //     newDataReady = true;
+
+    //      //Resetting all values:
+    //     timer.reset();
+    //     timerStarted = false;
+    // }
 
     if(useCommunication) {
         communication->sendDebugMessage("Echo rise event triggered\n");
@@ -91,20 +142,19 @@ void HCSR04::onEchoRise() {
 }
 
 void HCSR04::onEchoFall() {
-    //printf("fall\n");
-    // Disabling timer:
-    timer.stop();
+    // if(timerStarted) {
+    //     // Disabling timer:
+    //     timer.stop();
 
-    if(timerStarted) {
-        pulseDuration = timer.read();
+    //     pulseDuration = timer.read();
+    //     newDataReady = true;
 
-        newDataReady = true;
-    }
+    //      //Resetting all values:
+    //     timer.reset();
+    //     timerStarted = false;
+    // }
 
-    //Resetting all values:
-    timer.reset();
-    timerStarted = false;
-    echo.fall(NULL);
+    // echo.fall(NULL);
 
     if(useCommunication) {
         communication->sendDebugMessage("Echo fall event triggered\n");

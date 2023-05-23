@@ -8,22 +8,22 @@ MPU9250::MPU9250(PinName scl, PinName sda, PinName interrupt)
     i2c.frequency(400000);
 }
 
-void MPU9250::CheckDeviceOperation() {
+void MPU9250::checkDeviceOperation(Communication *communication_protocol) {
     uint8_t device_id = ReadByte(MPU9250_WHO_AM_I);
 
     printf("Device id: %x\n", device_id);
 
     //Checking if sensor is found by using its WHO_AM_I register:
     if(device_id == 0x71 || device_id == 0x73) {
-        printf("SUCCESS: MPU9250 found and functioning properly.\r\n");
+        communication_protocol->sendDebugMessage("SUCCESS: MPU9250 found and functioning properly.\r\n");
 
         return;
     }
 
-    printf("ERROR: MPU9250 not found or not functioning properly.\r\n");
+    communication_protocol->sendDebugMessage("ERROR: MPU9250 not found or not functioning properly.\r\n");
 }
 
-void MPU9250::PrintSensorReadings() {
+void MPU9250::printSensorReadings() {
     AccelerometerData accelerometerData = ReadAccelerometerData();
     GyroscopeData gyroscopeData = ReadGyroscopeData();
 
@@ -86,9 +86,9 @@ void MPU9250::WriteByte(uint8_t address, uint8_t data) {
 /// @brief Initialize the MPU9250 sensor.
 /// @param gyroscope_scale Gyroscope scale that needs to be configured.
 /// @param accelerometer_scale Accelerometer scale that needs to be configured.
-void MPU9250::Initialize(Gscale gyroscope_scale, Ascale accelerometer_scale) {
+void MPU9250::initialize(Gscale gyroscope_scale, Ascale accelerometer_scale) {
     //Reset all registers to default state:
-    Reset();
+    reset();
 
     //Performing self-test:
     //SelfTest();
@@ -137,17 +137,17 @@ void MPU9250::Initialize(Gscale gyroscope_scale, Ascale accelerometer_scale) {
 }
 
 /// @brief Reset all settings of the MPU9250 back to factory defaults.
-void MPU9250::Reset() {
+void MPU9250::reset() {
     WriteByte(MPU9250_PWR_MGMT_1, 0b10000000); //0x80
 }
 
-void MPU9250::Calibrate() {
+void MPU9250::calibrate() {
     uint8_t data[12]; // data array to hold accelerometer and gyro x, y, z, data
     uint16_t packet_count, fifo_count;
     int32_t gyroscope_bias[3] = {0, 0, 0}, acceleration_bias[3] = {0, 0, 0};
 
     //Resetting the device:
-    Reset();
+    reset();
 
     //Setting clock source to be PPL:
     WriteByte(MPU9250_PWR_MGMT_1, 0b00000001); //0x01

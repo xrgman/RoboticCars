@@ -8,10 +8,9 @@ DRV8908::DRV8908(PinName mosi, PinName miso, PinName sck, PinName nss, PinName s
     //Empty constructor :)
 }
 //MAYBE USE LOGIC ANALYZER
-void DRV8908::Initialize()
+void DRV8908::initialize()
 {
     //Enable the chip, by setting the sleep pin to high:
-    //sleep_pin = 1;
     sleep_pin.write(1);
 
     //Deselect the device:
@@ -22,54 +21,45 @@ void DRV8908::Initialize()
     spi.frequency(DRV8908_SPI_FREQ);
 
     //Disabling open load detection:
-    WriteByte(DRV8908_OLD_CTRL_1, 0b11111110);
+    //writeByte(DRV8908_OLD_CTRL_1, 0b11111110);
 }
 
 /// @brief Checks if the device id is 010 (DRV8908)
-void DRV8908::CheckDeviceOperation() {
-    //Clearing faults:
-    WriteByte(DRV8908_CONFIG_CTRL, 0b00000001);
+void DRV8908::checkDeviceOperation(Communication *communication_protocol) {
+    //Reading register containing device id:
+    uint8_t data = readByte(DRV8908_CONFIG_CTRL) & 0xFF;
 
-    //Reading status register:
-    uint16_t data = ReadByte(DRV8908_CONFIG_CTRL);
+    //Retreiving device id:
+    DeviceId deviceId = (DeviceId) Util::getBitsFromData(data, 1, 3);
 
-    //printf("\nTry nr 1:\n");
-    printf("\nReceived in hex: 0x%x\r\n", data);
-    printf("Received in binary: ");
-    Util::printAsBinary(data);
+    if(deviceId == drv8908 || deviceId == drv8910) { //Apperently this chip identifies as a drv8910.....
+        communication_protocol->sendDebugMessage("SUCCESS: DRV8908 found and functioning properly.\r\n");
+    }
 
-    data = ReadByte(DRV8908_OLD_CTRL_1);
+    // data = data >> 4;
+    // data &= 3;
+    //  &0x0FFF;
 
-    //printf("\nTry nr 1:\n");
-    printf("\nReceived in hex 2: 0x%x\r\n", data);
-    printf("Received in binary 2: ");
-    Util::printAsBinary(data);
+    
 
-    //Pulling chip select low, selecting the device:
-    //spi.select();
-    //chip_select.write(0);
+    // data = Util::getBitsFromData(data, 1, 6);
 
-    //Setting the frequency again (not sure if required?)
-    //spi.frequency(DRV8908_SPI_FREQ);
+    // printf("\nReceived in hex: 0x%x\r\n", data);
+    // printf("Received in binary: ");
+    // Util::printAsBinary(data);
 
-    //Waiting for chip to activate:
-    //wait_us(100);
-
-    // Writing read register 0x07 command:
-    // spi.write(0b0100011100000000); //0x4700
-    // uint16_t data = spi.write(0b0100011100000000);
-    // uint16_t data = spi.write(0xFF);
+    //printf("1: %d", data[$0]);
 }
 
-void DRV8908::PrintSensorReadings() {
+void DRV8908::printSensorReadings() {
 
 }
 
-void DRV8908::Reset() {
+void DRV8908::reset() {
     
 }
 
-void DRV8908::PrintErrorStatus()
+void DRV8908::printErrorStatus()
 {
     //spi.select();
     // chip_select = 0;
@@ -82,21 +72,21 @@ void DRV8908::PrintErrorStatus()
     }
 
     printf("Status: ");
-    printf("%x\n", ReadByte(DRV8908_IC_STAT));
+    printf("%x\n", readByte(DRV8908_IC_STAT));
     printf("Overcurrent: ");
-    printf("%x, ", ReadByte(DRV8908_OCP_STAT_3));
-    printf("%x, ", ReadByte(DRV8908_OCP_STAT_2));
-    printf("%x\n", ReadByte(DRV8908_OCP_STAT_1));
+    printf("%x, ", readByte(DRV8908_OCP_STAT_3));
+    printf("%x, ", readByte(DRV8908_OCP_STAT_2));
+    printf("%x\n", readByte(DRV8908_OCP_STAT_1));
     printf("Open Load: ");
-    printf("%x, ", ReadByte(DRV8908_OLD_STAT_3));
-    printf("%x, ", ReadByte(DRV8908_OLD_STAT_2));
-    printf("%x\n", ReadByte(DRV8908_OLD_STAT_1));
+    printf("%x, ", readByte(DRV8908_OLD_STAT_3));
+    printf("%x, ", readByte(DRV8908_OLD_STAT_2));
+    printf("%x\n", readByte(DRV8908_OLD_STAT_1));
 
     // chip_select = 1;
     //spi.deselect();
 }
 
-void DRV8908::Test()
+void DRV8908::test()
 {
     
 
@@ -145,47 +135,27 @@ void DRV8908::Test()
     printf("Status register try 2: %x\n", data2);
 }
 
-void DRV8908::WriteByte(uint8_t address, uint8_t data)
+void DRV8908::writeByte(uint8_t address, uint8_t data)
 {
     uint16_t command = (address << 8) | data;
 
     chip_select.write(0);
-    thread_sleep_for(10);
-
+   
     spi.write(command);
 
-    thread_sleep_for(10);
     chip_select.write(1);
 }
 
-uint16_t DRV8908::ReadByte(uint8_t address)
+uint16_t DRV8908::readByte(uint8_t address)
 {
     //Creating read message command for specified address:
     uint16_t command = DRV8908_READ_ADDRESS | (address << 8);
 
-    spi.lock();
     chip_select.write(0);
-    thread_sleep_for(10);
 
-    spi.frequency(DRV8908_SPI_FREQ);
-    thread_sleep_for(10);
+    uint16_t data = spi.write(command);
 
-    spi.write(command);
-    uint16_t data = spi.write(0x0000);
-
-    thread_sleep_for(10);
     chip_select.write(1);
-    spi.unlock();
-
-    // thread_sleep_for(10);
-
-    // chip_select.write(0);
-    // thread_sleep_for(10);
-
-    // uint16_t data = spi.write(0x0000);
-
-    // thread_sleep_for(10);
-    // chip_select.write(1);
 
     return data;
 }

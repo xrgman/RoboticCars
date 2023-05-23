@@ -11,7 +11,9 @@ class HCSR04 {
         void startMeasurement();
         bool isNewDataReady();
         int getDistanceCm();
+        float getDistanceCmBlocking();
         int getDistanceInch();
+
     private:
         DigitalOut trigger;
         InterruptIn echo;
@@ -21,6 +23,7 @@ class HCSR04 {
         int pulseDuration, distance;
         Communication *communication;
 
+        void initialize();
         void disableTrigger();
         void onEchoRise();
         void onEchoFall();

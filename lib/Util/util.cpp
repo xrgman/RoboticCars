@@ -60,3 +60,33 @@ void Util::scanForI2CDevices(PinName sda, PinName scl) {
         thread_sleep_for(0.05);
     }   
 }
+
+uint8_t Util::getBitsFromData(uint8_t data, uint8_t start, uint8_t end) {
+    //Shift bits into position:
+    data = data >> (7 - end);
+
+    //Removing leading bits:
+    data &= (1 << (end-start+1)) - 1;
+
+    return data;
+}
+
+uint16_t Util::getBitsFromData(uint16_t data, uint8_t start, uint8_t end) {
+    //Shift bits into position:
+    data = data >> (15 - end);
+
+    //Removing leading bits:
+    data &= (1 << (end-start+1)) - 1;
+
+    return data;
+}
+
+uint32_t Util::getBitsFromData(uint32_t data, uint8_t start, uint8_t end) {
+    //Shift bits into position:
+    data = data >> (31 - end);
+
+    //Removing leading bits:
+    data &= (1 << (end-start+1)) - 1;
+
+    return data;
+}

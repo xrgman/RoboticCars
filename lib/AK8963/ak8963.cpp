@@ -6,24 +6,24 @@ AK8963::AK8963(PinName scl, PinName sda) : i2c(sda, scl) {
 }
 
 /// @brief Check if the device is connected, by reading it's WHO_AM_I register.
-void AK8963::CheckDeviceOperation() {
-    uint8_t device_id = ReadByte(AK8963_WHO_AM_I);
+void AK8963::checkDeviceOperation(Communication *communication_protocol) {
+    uint8_t device_id = readByte(AK8963_WHO_AM_I);
 
     //Checking if sensor is found by using its WHO_AM_I register:
     if(device_id == 0x48) {
-        printf("SUCCESS: AK8963 found and functioning properly.\r\n");
+        communication_protocol->sendDebugMessage("SUCCESS: AK8963 found and functioning properly.\r\n");
 
         return;
     }
 
-    printf("ERROR: AK8963 not found or not functioning properly.\r\n");
+    communication_protocol->sendDebugMessage("ERROR: AK8963 not found or not functioning properly.\r\n");
 }
 
 /// @brief Print all sensor data.
-void AK8963::PrintSensorReadings() {
+void AK8963::printSensorReadings() {
     MagnetometerData magnetometerData;
 
-    uint8_t status = ReadMagnetometerData(&magnetometerData);
+    uint8_t status = readMagnetometerData(&magnetometerData);
 
     printf("AK8963 sensor data: \r\n");
     printf("*** Status: %s\n\r", status ? "no overflow" : "overflow");
@@ -33,7 +33,7 @@ void AK8963::PrintSensorReadings() {
 /// @brief Initialize the AK8963 magnetometer.
 /// @param magnetometer_scale measurement scale, either 14 or 16 bit.
 /// @param magnetometer_mode measurement mode.
-void AK8963::Initialize(Mscale magnetometer_scale, Mmode magnetometer_mode) {
+void AK8963::initialize(Mscale magnetometer_scale, Mmode magnetometer_mode) {
     uint8_t rawData[3]; 
 
     //Saving configuration
@@ -41,20 +41,20 @@ void AK8963::Initialize(Mscale magnetometer_scale, Mmode magnetometer_mode) {
     magnetometerMode = magnetometer_mode;
 
     //Resetting all settings:
-    Reset();
+    reset();
 
     //Power off the magnetometer:
-    WriteByte(AK8963_CNTL1, Mmode::MOP_POWER_DOWN); //0x00 
+    writeByte(AK8963_CNTL1, Mmode::MOP_POWER_DOWN); //0x00 
     thread_sleep_for(0.01);
 
     //Setting Fuse ROM access mode:
-    WriteByte(AK8963_CNTL1, Mmode::MOP_FUSE_ROM); //0x0F
+    writeByte(AK8963_CNTL1, Mmode::MOP_FUSE_ROM); //0x0F
     thread_sleep_for(0.01);
 
     //Reading sensitivty adjustment values:
-    rawData[0] = ReadByte(AK8963_ASAX);
-    rawData[1] = ReadByte(AK8963_ASAY);
-    rawData[2] = ReadByte(AK8963_ASAZ);
+    rawData[0] = readByte(AK8963_ASAX);
+    rawData[1] = readByte(AK8963_ASAY);
+    rawData[2] = readByte(AK8963_ASAZ);
 
     //Calculating calibration data, using the formula from the datasheet:
     magnetometer_sensitivity_adjustment[0] =  (float)(rawData[0] - 128)/256.0f + 1.0f;  
@@ -62,22 +62,22 @@ void AK8963::Initialize(Mscale magnetometer_scale, Mmode magnetometer_mode) {
     magnetometer_sensitivity_adjustment[2] =  (float)(rawData[2] - 128)/256.0f + 1.0f;
 
     //Power off the magnetometer:
-    WriteByte(AK8963_CNTL1, Mmode::MOP_POWER_DOWN); //0x00 
+    writeByte(AK8963_CNTL1, Mmode::MOP_POWER_DOWN); //0x00 
     thread_sleep_for(0.01);
 
     // Configure the magnetometer for continuous read and highest resolution
     // set Mscale bit 4 to 1 (0) to enable 16 (14) bit resolution in CNTL register,
     // and enable continuous mode data acquisition Mmode (bits [3:0]), 0010 for 8 Hz and 0110 for 100 Hz sample rates
-    WriteByte(AK8963_CNTL1, magnetometer_scale << 4 | magnetometer_mode); // Set magnetometer data resolution and sample ODR
+    writeByte(AK8963_CNTL1, magnetometer_scale << 4 | magnetometer_mode); // Set magnetometer data resolution and sample ODR
     thread_sleep_for(0.01);
 }
 
 /// @brief Reset all registers of the magnetometer.
-void AK8963::Reset() {
-    WriteByte(AK8963_CNTL2, 0b00000001); // 0x01
+void AK8963::reset() {
+    writeByte(AK8963_CNTL2, 0b00000001); // 0x01
 }
 
-void AK8963::Calibrate() {
+void AK8963::calibrate() {
 //     uint16_t ii = 0, sample_count = 0;
 //     int32_t mag_bias[3] = {0, 0, 0}, mag_scale[3] = {0, 0, 0};
 //     int16_t mag_max[3] = {-32767, -32767, -32767}, mag_min[3] = {32767, 32767, 32767}, mag_temp[3] = {0, 0, 0};
@@ -136,7 +136,7 @@ void AK8963::Calibrate() {
 /// @brief Read one byte from the requested I2C register.
 /// @param address Address of the register.
 /// @return Data currently in the register.
-char AK8963::ReadByte(uint8_t address) {
+char AK8963::readByte(uint8_t address) {
     char data[1];
     char data_write[1];
     data_write[0] = address;
@@ -152,7 +152,7 @@ char AK8963::ReadByte(uint8_t address) {
 /// @param address Address of the register.
 /// @param count Number of bytes to read
 /// @param dest Array to store resulting data in.
-void AK8963::ReadBytes(uint8_t address, uint8_t count, uint8_t *dest) {
+void AK8963::readBytes(uint8_t address, uint8_t count, uint8_t *dest) {
     char data[14];
     char data_write[1];
     data_write[0] = address;
@@ -169,7 +169,7 @@ void AK8963::ReadBytes(uint8_t address, uint8_t count, uint8_t *dest) {
 /// @brief Write one byte to a specific I2C register.
 /// @param address Address of the register.
 /// @param data Data to write to the register.
-void AK8963::WriteByte(uint8_t address, uint8_t data) {
+void AK8963::writeByte(uint8_t address, uint8_t data) {
     char data_write[2];
     data_write[0] = address;
     data_write[1] = data;
@@ -183,8 +183,8 @@ void AK8963::WriteByte(uint8_t address, uint8_t data) {
 
 /// @brief Method that can be used to check if new data is available.
 /// @return whether new data is available and ready to be read.
-bool AK8963::IsDataReady() {
-    uint8_t status1 = ReadByte(AK8963_ST1);
+bool AK8963::isDataReady() {
+    uint8_t status1 = readByte(AK8963_ST1);
 
     return status1 & 0x01;
 }
@@ -192,24 +192,24 @@ bool AK8963::IsDataReady() {
 /// @brief Read the magnetometer sensor data.
 /// @param data Data object to store the data in.
 /// @return status id, can be either of the following value: 0 (overflow) 1 (success)
-bool AK8963::ReadMagnetometerData(MagnetometerData *data) {
+bool AK8963::readMagnetometerData(MagnetometerData *data) {
     uint8_t rawData[2];
 
     //Reading measurement data x-axis:
-    rawData[0] = ReadByte(AK8963_XOUT_L);
-    rawData[1] = ReadByte(AK8963_XOUT_H);
+    rawData[0] = readByte(AK8963_XOUT_L);
+    rawData[1] = readByte(AK8963_XOUT_H);
 
     data->mx = (int16_t)(((int16_t)rawData[1] << 8) | rawData[0]);
 
     //Reading measurement data y-axis:
-    rawData[0] = ReadByte(AK8963_YOUT_L);
-    rawData[1] = ReadByte(AK8963_YOUT_H);
+    rawData[0] = readByte(AK8963_YOUT_L);
+    rawData[1] = readByte(AK8963_YOUT_H);
 
     data->my = (int16_t)(((int16_t)rawData[1] << 8) | rawData[0]);
 
     //Reading measurement data z-axis:
-    rawData[0] = ReadByte(AK8963_ZOUT_L);
-    rawData[1] = ReadByte(AK8963_ZOUT_H);
+    rawData[0] = readByte(AK8963_ZOUT_L);
+    rawData[1] = readByte(AK8963_ZOUT_H);
 
     data->mz = (int16_t)(((int16_t)rawData[1] << 8) | rawData[0]);
 
@@ -219,7 +219,7 @@ bool AK8963::ReadMagnetometerData(MagnetometerData *data) {
     data->mz *= magnetometer_sensitivity_adjustment[2];
 
     //Checking if an overflow occured:
-    uint8_t status2 = ReadByte(AK8963_ST2);
+    uint8_t status2 = readByte(AK8963_ST2);
 
     if(status2 & 0x08) {
         return false; //Overflow occured.

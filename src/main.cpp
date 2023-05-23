@@ -45,14 +45,15 @@ MPU9250 mpu9250(MPU9250_SCL_PIN, MPU9250_SDA_PIN, MPU9250_INT_PIN);
 AK8963 ak8963(AK8963_SCL_PIN, AK8963_SDA_PIN);
 
 //Ultrasonic sensors:
-// HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, &comm);
-// HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
+HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, &comm);
+HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
+HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &comm);
 
 //I2C i2c(MPU9250_SDA, MPU9250_SCL);
 
 void printFault() {
     printf("Printing out fault information:\n\n");
-    drv8908.PrintErrorStatus();
+    drv8908.printErrorStatus();
 }
 
 void printTest() {
@@ -89,49 +90,21 @@ void state_changed_callback(Statemachine::State oldState, Statemachine::State ne
 }
 
 void checkHardwareConnections() {
-    comm.sendDebugMessage("***** Starting hardware connectivity check *****\r\n");
+    comm.sendDebugMessage("\n***** Starting hardware connectivity check *****\r\n");
 
     //MPU9250:
     comm.sendDebugMessage("\n***** Checking sensor MPU9250 *****\r\n");
-    mpu9250.CheckDeviceOperation();
+    mpu9250.checkDeviceOperation(&comm);
 
     //AK8963:
     comm.sendDebugMessage("\n***** Checking sensor AK8963 *****\r\n");
-    ak8963.CheckDeviceOperation();
+    ak8963.checkDeviceOperation(&comm);
 
     //DRV8908:
     comm.sendDebugMessage("\n***** Checking sensor DRV8908 *****\r\n");
-    //drv8908.CheckDeviceOperation();
+    drv8908.checkDeviceOperation(&comm);
 }
 
-DigitalOut Trigger(ULTRASONIC_FRONT_TRIGGER_PIN);                                //Instance of the DigitalOut class called 'Trigger'
-DigitalIn Echo(ULTRASONIC_FRONT_ECHO_PIN); 
-Timer pulse; 
-
-float GetDistance(){                                            //Function Name to be called
-     int EchoPulseWidth=0,EchoStart=0,EchoEnd=0;                //Assign and set to zero the local variables for this function
-     Trigger=1;                                                 //Signal goes High i.e. 3V3
-     wait_us(10000);                                              //Wait 100us to give a pulse width
-     Trigger=0;                                                 //Signal goes Low i.e. 0V
-     pulse.reset();                                             //Rest the instance of the Timer Class
-     while(Echo==0){
-            if(EchoStart>=25000) {
-                printf("H\n"); //never high :(
-                break;
-            }
-                                                  // wait for Echo to go high
-            EchoStart=pulse.read_us();                          //AND with timeout to prevent blocking!      
-     }
-     
-
-     while(Echo==1&&(EchoEnd-EchoStart<25000)){                 //wait for echo to return low
-        EchoEnd=pulse.read_us();                                //or'd with timeout to prevent blocking!   
-     }
-
-     EchoPulseWidth=EchoEnd-EchoStart;   
-                            //time period in us
-     return (float)EchoPulseWidth/5.8f;                         //calculate distance in mm and return the value as a float
-}
 
 //NULL IS NC :)
 int main()
@@ -146,71 +119,55 @@ int main()
     comm.initialize(command_callback);
 
     //Initializing MPU9250 chip:
-    mpu9250.Initialize(MPU9250::GFS_250DPS, MPU9250::AFS_2G);
+    mpu9250.initialize(MPU9250::GFS_250DPS, MPU9250::AFS_2G);
 
     //Initializig AK8963:
-    ak8963.Initialize(AK8963::MFS_16BITS, AK8963::MOP_CONINUES_2);
+    ak8963.initialize(AK8963::MFS_16BITS, AK8963::MOP_CONINUES_2);
 
     //Initializing DRV8908 chip:
-    //drv8908.Initialize();
+    drv8908.initialize();
 
     //Checking if all hardware is connected and functioning properly:
-    //checkHardwareConnections();
+    checkHardwareConnections();
 
-    //ultrasonicRight.startMeasurement();+
-    //float Distance;                                            //Assign a local variable for the main function
-     //pulse.start();
+    //ultrasonicRight.startMeasurement();
 
-     while (true)
-     {
-        statemachine.getCurrentState();
-
-        thread_sleep_for(5000);
-
+    while (true)
+    {
         //drv8908.Test();
-        //mpu9250.Test();
-        //checkHardwareConnections();
         //mpu9250.PrintAllSensorReadings();
 
         // if(ak8963.IsDataReady()) {
         //     ak8963.PrintSensorReadings();
         // }
 
-        //drv8908.CheckDeviceOperation();
+   
 
-        //ultrasonicFront.startMeasurement();
+
+
+        //HCSR04 test stuff:
         //ultrasonicRight.startMeasurement();
-
+        //distance = ultrasonicRight.getDistanceCmBlocking();
         //while(!ultrasonicRight.isNewDataReady());
-        
+        //printf("Distances, front: NO cm, right: %d cm\n", ultrasonicRight.getDistanceCm());
 
-        //printf("Distances, front: %d cm, right: NO cm\n", ultrasonicFront.getDistanceCm());
+        //printf("Distance %.0fmm\n\r", distance);                 //Send the value to the serial port for monitoring purposes
 
-        // Distance=GetDistance();                                 //Get the value returned from the function GetDistance()
-        // printf("Distance %.0fmm\n\r",Distance);                 //Send the value to the serial port for monitoring purposes
-        // thread_sleep_for(250);
-        // printf("ON\n");
-        // Trigger.write(1);
-        // thread_sleep_for(5000);
-        // printf("OFF\n");
-        // Trigger.write(0);  
-        // thread_sleep_for(5000);
-
-        // led1 = !led1;
-        // thread_sleep_for(WAIT_TIME_MS);
-	    // led2 = !led2;
-        // thread_sleep_for(WAIT_TIME_MS);
-        // led3 = !led3;
-        // thread_sleep_for(WAIT_TIME_MS);
-        // led4 = !led4;
-        // thread_sleep_for(WAIT_TIME_MS);
-        // led4 = !led4;
-        // thread_sleep_for(WAIT_TIME_MS);
-        // led3 = !led3;
-        // thread_sleep_for(WAIT_TIME_MS);
-        // led2 = !led2;
-        // thread_sleep_for(WAIT_TIME_MS);
-        // led1 = !led1;
-        // thread_sleep_for(WAIT_TIME_MS);
+        led1 = !led1;
+        thread_sleep_for(WAIT_TIME_MS);
+	    led2 = !led2;
+        thread_sleep_for(WAIT_TIME_MS);
+        led3 = !led3;
+        thread_sleep_for(WAIT_TIME_MS);
+        led4 = !led4;
+        thread_sleep_for(WAIT_TIME_MS);
+        led4 = !led4;
+        thread_sleep_for(WAIT_TIME_MS);
+        led3 = !led3;
+        thread_sleep_for(WAIT_TIME_MS);
+        led2 = !led2;
+        thread_sleep_for(WAIT_TIME_MS);
+        led1 = !led1;
+        thread_sleep_for(WAIT_TIME_MS);
     }
 }

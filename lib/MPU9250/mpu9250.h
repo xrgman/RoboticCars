@@ -36,12 +36,12 @@ class MPU9250 : ISensor {
         
 
         MPU9250(PinName scl, PinName sda, PinName interupt);
-        void CheckDeviceOperation();
-        void PrintSensorReadings();
+        void checkDeviceOperation(Communication *communication_protocol);
+        void printSensorReadings();
+        void reset();
 
-        void Initialize(Gscale gyroscope_scale, Ascale accelerometer_scale);
-        void Reset();
-        void Calibrate();
+        void initialize(Gscale gyroscope_scale, Ascale accelerometer_scale);
+        void calibrate();
         
 
         AccelerometerData ReadAccelerometerData();

@@ -29,15 +29,15 @@ class AK8963 : ISensor {
         };
 
         AK8963(PinName scl, PinName sda);
-        void CheckDeviceOperation();
-        void PrintSensorReadings();
+        void checkDeviceOperation(Communication *communication_protocol);
+        void printSensorReadings();
 
-        void Initialize(Mscale magnetometer_scale, Mmode magnetometer_mode);
-        void Reset();
-        void Calibrate();
+        void initialize(Mscale magnetometer_scale, Mmode magnetometer_mode);
+        void reset();
+        void calibrate();
 
-        bool IsDataReady();
-        bool ReadMagnetometerData(MagnetometerData *data);
+        bool isDataReady();
+        bool readMagnetometerData(MagnetometerData *data);
 
     private:
         I2C i2c;
@@ -45,9 +45,9 @@ class AK8963 : ISensor {
         Mmode magnetometerMode;
         float magnetometer_sensitivity_adjustment[3];
 
-        char ReadByte(uint8_t address);
-        void ReadBytes(uint8_t address, uint8_t count, uint8_t *dest);
-        void WriteByte(uint8_t address, uint8_t data);
+        char readByte(uint8_t address);
+        void readBytes(uint8_t address, uint8_t count, uint8_t *dest);
+        void writeByte(uint8_t address, uint8_t data);
 
 };
 
