@@ -2,6 +2,7 @@
 #define MPU9250_H
 
 #include "mbed.h"
+#include "edevice.h"
 #include "sensor.h"
 
 //***** Address of MPU9250 *****
@@ -17,7 +18,7 @@ typedef struct {
 
 
 
-class MPU9250 : ISensor {
+class MPU9250 : ISensor, IEDevice {
     public:
         enum Gscale {
             GFS_250DPS = 0,

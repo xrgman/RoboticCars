@@ -112,8 +112,8 @@ void Communication::processReceivedByte(uint8_t byte) {
         //TODO some things :)
         if(byte == '\n') {
             // Printing received message
-            char msg[26+receiving_data.data_size];
-            snprintf(msg, sizeof(msg), "Type: %d, size: %d, data: %s\n", receiving_data.type, receiving_data.data_size, receiving_data.data);
+            char msg[28+receiving_data.data_size];
+            snprintf(msg, sizeof(msg), "Type: %d, size: %d, data: %s.\n", receiving_data.type, receiving_data.data_size, receiving_data.data);
             sendDebugMessage(msg);
 
             //Processing message:

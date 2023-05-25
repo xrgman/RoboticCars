@@ -1,5 +1,5 @@
 #include "drv8908.h"
-#include "drv8908registers.h"
+#include "drv8910registers.h"
 #include "util.h"
 
 DRV8908::DRV8908(PinName mosi, PinName miso, PinName sck, PinName nss, PinName sleep, PinName fault) 
@@ -7,6 +7,7 @@ DRV8908::DRV8908(PinName mosi, PinName miso, PinName sck, PinName nss, PinName s
 {
     //Empty constructor :)
 }
+
 //MAYBE USE LOGIC ANALYZER
 void DRV8908::initialize()
 {
@@ -20,50 +21,58 @@ void DRV8908::initialize()
     spi.format(DRV8908_SPI_BITS, DRV8908_SPI_MODE);
     spi.frequency(DRV8908_SPI_FREQ);
 
-    //Disabling open load detection:
-    //writeByte(DRV8908_OLD_CTRL_1, 0b11111110);
+    //Configuring the chip:
+    writeByte(OLD_CTRL_1, 0b11111111); //Disabling open load detection on channels 1-8.
+    writeByte(OLD_CTRL_2, 0b11001111); //Disable open load detection on channels 9-12 and disable errors from open load detection.
+    //writeByte(OLD_CTRL_3, 0b10000000); //Set overcurrent protection to most forgiving setting. (DISABLED FOR NOW)
+    writeByte(SR_CTRL_1, 0b11111111); //Set slew rate to 2.5us vrs default 0.6us on half bridges (1-8)
+    writeByte(SR_CTRL_1, 0b00001111); //Set slew rate to 2.5us vrs default 0.6us on half bridges (9-12)
+    writeByte(PWM_FREQ_CTRL, 0b11111111); //Setting pwm channels to max speed.
+}
+
+//************************************
+//******** Motor functions ***********
+//************************************
+
+void DRV8908::configureMotor(uint8_t id, HalfBridge half_bridg1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay) {
+    motors[id] = DRV89xxMotor(half_bridg1, half_bridge2, pwm_channel, reverse_delay);
+}
+
+void DRV8908::setMotor(uint8_t id, uint8_t speed, Direction direction) {
+    motors[id].set(config_cache, speed, direction);
+}
+
+/// @brief Disable a specific motor.
+/// @param id The id of the motor that needs to be disabled.
+void DRV8908::disableMotor(uint8_t id) {
+    motors[id].disable(config_cache);
+}
+
+/// @brief Writing the changes made by setMotor and disable to the actual chip.
+void DRV8908::writeChanges() {
+    for (int i = DRV89XX_UPDATE_START; i <= DRV89XX_UPDATE_END; i++) {
+        writeByte(i, config_cache[i]);
+    }
 }
 
 /// @brief Checks if the device id is 010 (DRV8908)
 void DRV8908::checkDeviceOperation(Communication *communication_protocol) {
     //Reading register containing device id:
-    uint8_t data = readByte(DRV8908_CONFIG_CTRL) & 0xFF;
+    uint8_t data = readByte(CONFIG_CTRL) & 0xFF;
 
     //Retreiving device id:
     DeviceId deviceId = (DeviceId) Util::getBitsFromData(data, 1, 3);
 
     if(deviceId == drv8908 || deviceId == drv8910) { //Apperently this chip identifies as a drv8910.....
         communication_protocol->sendDebugMessage("SUCCESS: DRV8908 found and functioning properly.\r\n");
+        return;
     }
 
-    // data = data >> 4;
-    // data &= 3;
-    //  &0x0FFF;
-
-    
-
-    // data = Util::getBitsFromData(data, 1, 6);
-
-    // printf("\nReceived in hex: 0x%x\r\n", data);
-    // printf("Received in binary: ");
-    // Util::printAsBinary(data);
-
-    //printf("1: %d", data[$0]);
-}
-
-void DRV8908::printSensorReadings() {
-
-}
-
-void DRV8908::reset() {
-    
+    communication_protocol->sendDebugMessage("ERROR: DRV8908 not found or not functioning properly.\r\n");
 }
 
 void DRV8908::printErrorStatus()
 {
-    //spi.select();
-    // chip_select = 0;
-
     if(fault_pin.read()) {
         printf("Error detected\r\n");
     }
@@ -72,68 +81,37 @@ void DRV8908::printErrorStatus()
     }
 
     printf("Status: ");
-    printf("%x\n", readByte(DRV8908_IC_STAT));
+    Util::printAsBinary(readByte(IC_STAT));
     printf("Overcurrent: ");
-    printf("%x, ", readByte(DRV8908_OCP_STAT_3));
-    printf("%x, ", readByte(DRV8908_OCP_STAT_2));
-    printf("%x\n", readByte(DRV8908_OCP_STAT_1));
+    printf("%x, ", readByte(OCP_STAT_3));
+    printf("%x, ", readByte(OCP_STAT_2));
+    printf("%x\n", readByte(OCP_STAT_1));
     printf("Open Load: ");
-    printf("%x, ", readByte(DRV8908_OLD_STAT_3));
-    printf("%x, ", readByte(DRV8908_OLD_STAT_2));
-    printf("%x\n", readByte(DRV8908_OLD_STAT_1));
-
-    // chip_select = 1;
-    //spi.deselect();
+    printf("%x, ", readByte(OLD_STAT_1));
+    printf("%x, ", readByte(OLD_STAT_2));
+    printf("%x\n", readByte(OLD_STAT_3));
 }
 
 void DRV8908::test()
 {
-    
+    //This works::
+    //Maybe register addresses are that of drv8910????? -> YES
+    printf("Read first time:");
+    Util::printAsBinary(readByte(OLD_CTRL_1) & 0xFF);
 
-    // chip_select = 0;
-    // wait_us(10);
-    // spi.write(0b0100011100000000); //Read register 7 with status info :):)
-    // wait_us(10);
-    // chip_select = 1;
+    writeByte(OLD_CTRL_1, 0b11111110);
 
-    //Select the drv8908 chip:
-    chip_select.write(0);
+    //thread_sleep_for(10);
 
-    spi.frequency(DRV8908_SPI_FREQ);
+    printf("Read second time:");
+    Util::printAsBinary(readByte(OLD_CTRL_1) & 0xFF);
 
-    wait_us(10);
-
-    //Writing read register 0x07 command:
-    //spi.write(0b0100011100000000); //0x4700
-    uint16_t data = spi.write(0b0100011100000000);
-    //uint16_t data = spi.write(0xFF);
-    
-    wait_us(10);
-
-    //Deselect the chip:
-    chip_select.write(1);
-
-    printf("Status register: %x\n", data );
-
-    //Select the drv8908 chip:
-    chip_select.write(0);
-
-    spi.frequency(DRV8908_SPI_FREQ);
-
-    wait_us(10);
-
-    //Writing read register 0x07 command:
-    spi.write(0b0100011100000000); //0x4700
-    uint16_t data2 = spi.write(0x00);
-    //uint16_t data = spi.write(0xFF);
-    
-    wait_us(10);
-
-    //Deselect the chip:
-    chip_select.write(1);
-
-    printf("Status register try 2: %x\n", data2);
+    printf("\n\n\n");
 }
+
+//************************************
+//******** SPI helper functions ******
+//************************************
 
 void DRV8908::writeByte(uint8_t address, uint8_t data)
 {
@@ -159,14 +137,3 @@ uint16_t DRV8908::readByte(uint8_t address)
 
     return data;
 }
-
-// void init() {
-//     // Configure device
-//     writeByte(DRV8908_OLD_CTRL_1, 0b11111111); // Disable open load detection on channels 1-8
-//     writeByte(DRV8908_OLD_CTRL_2, 0b11001111); // Disable errors from open load detection, open load detect on channels 9-12
-//     writeByte(DRV8908_OLD_CTRL_3, 0b10000000); // set Overcurrent protection to the most forgiving setting
-//     writeByte(DRV8908_SR_CTRL_1, 0b11111111); // Set slew rate to 2.5us vrs default 0.6us on half bridges (1-8)
-//     writeByte(DRV8908_SR_CTRL_2, 0b00001111); // Set slew rate to 2.5us vrs default 0.6us on half bridges (9-12)
-//     writeByte(DRV8908_PWM_CTRL_1, 0xFF);
-// }
-

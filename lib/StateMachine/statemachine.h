@@ -2,11 +2,7 @@
 #define STATEMACHINE_H
 
 #include "mbed.h"
-
-//TO-DO: Create table with allowed state changes :)
-//From in rows and to in columns, and use binary.
-
-
+#include "communication.h"
 
 class Statemachine {
     public:
@@ -20,13 +16,15 @@ class Statemachine {
             NUMBER_OF_STATES
         } State;
 
-        Statemachine(Callback<void(State, State)> state_changed_callback);
+        Statemachine(Callback<void(State, State)> state_changed_callback, Communication *communication);
         void changeState(State newState);
-        State getCurrentState();
+        State getCurrentState(bool print);
 
+        static char const* StateToString(State state);
     private:
         State currentState;
         Callback<void(State, State)> state_changed_callback;
+        Communication *communication;
 
         //Array containing data of which state changes are allowed, without considering enviromental conditions.
         //IDLE, EMERGENCY, CALIBRATION, DRIVING_FORWARD, DRIVING_BACKWARD

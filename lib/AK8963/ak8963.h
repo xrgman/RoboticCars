@@ -2,6 +2,7 @@
 #define AK8963_H
 
 #include "mbed.h"
+#include "edevice.h"
 #include "sensor.h"
 
 //***** Address of MPU9250 *****
@@ -11,7 +12,7 @@ typedef struct {
     float mx, my, mz;
 } MagnetometerData;
 
-class AK8963 : ISensor {
+class AK8963 : ISensor, IEDevice {
     public: 
         enum Mscale {
             MFS_14BITS = 0, // 0.6 mG per LSB

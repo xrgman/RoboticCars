@@ -7,6 +7,7 @@
         "string": "cpp",
         "string_view": "cpp",
         "system_error": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "cstddef": "cpp"
     }
 }
