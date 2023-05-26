@@ -50,8 +50,28 @@ void DRV8908::disableMotor(uint8_t id) {
 
 /// @brief Writing the changes made by setMotor and disable to the actual chip.
 void DRV8908::writeChanges() {
+    //printLocalConfigContent();
+
     for (int i = DRV89XX_UPDATE_START; i <= DRV89XX_UPDATE_END; i++) {
         writeByte(i, config_cache[i]);
+    }
+}
+
+//************************************
+//******** Debug functions ***********
+//************************************
+
+void DRV8908::printRegisterContents() {
+    for (int i = DRV89XX_UPDATE_START; i <= DRV89XX_UPDATE_END; i++) {
+        printf("Register 0x%x: ", i);
+        Util::printAsBinary(readByte(i));
+    }
+}
+
+void DRV8908::printLocalConfigContent() {
+    for (int i = DRV89XX_UPDATE_START; i <= DRV89XX_UPDATE_END; i++) {
+        printf("Register 0x%x: ", i);
+        Util::printAsBinary(config_cache[i]);
     }
 }
 
@@ -97,14 +117,14 @@ void DRV8908::test()
     //This works::
     //Maybe register addresses are that of drv8910????? -> YES
     printf("Read first time:");
-    Util::printAsBinary(readByte(OLD_CTRL_1) & 0xFF);
+    Util::printAsBinary(readByte(PWM_DUTY_CTRL_1) & 0xFF);
 
-    writeByte(OLD_CTRL_1, 0b11111110);
+    writeByte(PWM_DUTY_CTRL_1, 10);
 
     //thread_sleep_for(10);
 
     printf("Read second time:");
-    Util::printAsBinary(readByte(OLD_CTRL_1) & 0xFF);
+    Util::printAsBinary(readByte(PWM_DUTY_CTRL_1) & 0xFF);
 
     printf("\n\n\n");
 }
@@ -122,6 +142,8 @@ void DRV8908::writeByte(uint8_t address, uint8_t data)
     spi.write(command);
 
     chip_select.write(1);
+
+    wait_ns(400);
 }
 
 uint16_t DRV8908::readByte(uint8_t address)

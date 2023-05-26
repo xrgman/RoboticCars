@@ -35,6 +35,9 @@ class DRV8908 : IEDevice {
         void disableMotor(uint8_t id);
         void writeChanges();
 
+        void printRegisterContents();
+        void printLocalConfigContent();
+
         void checkDeviceOperation(Communication *communication_protocol);
         void printErrorStatus();
         void test();
@@ -48,6 +51,8 @@ class DRV8908 : IEDevice {
 
         uint8_t config_cache[DRV89XX_CONFIG_BYTES] = {0};
         DRV89xxMotor motors[DRV89XX_MAX_MOTORS];
+
+        
 
         void writeByte(uint8_t address, uint8_t data);
         uint16_t readByte(uint8_t address);

@@ -94,14 +94,14 @@ void DRV89xxMotor::setBridgeHighsideEnablePWM(uint8_t *config_cache, DRV89xxHalf
     BIT_SET(config_cache[bridge.pwm_ctrl_register], bridge.bitshift_1); //Enable PWM of the half bridge 
 
     //Configuring the correct PWM channel:
-    if(pwm_channel == PWM_CHANNEL_2 || PWM_CHANNEL_4) {
+    if(pwm_channel == PWM_CHANNEL_2 || pwm_channel == PWM_CHANNEL_4) {
         BIT_SET(config_cache[bridge.pwm_map_register], bridge.bitshift_2);
     }
     else {
         BIT_CLEAR(config_cache[bridge.pwm_map_register], bridge.bitshift_2);
     }
 
-    if(pwm_channel == PWM_CHANNEL_3 || PWM_CHANNEL_4) {
+    if(pwm_channel == PWM_CHANNEL_3 || pwm_channel == PWM_CHANNEL_4) {
         BIT_SET(config_cache[bridge.pwm_map_register], bridge.bitshift_2 + 1);
     }
     else {

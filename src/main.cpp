@@ -143,22 +143,52 @@ int main()
     //P16 -> M3 -> OUT5 (m3+), OUT6 (m3-)
     drv8908.configureMotor(0, HALF_BRIDGE_5, HALF_BRIDGE_6, PWM_CHANNEL_1, 10);
 
-    drv8908.setMotor(0, 50, FORWARD);
-    drv8908.writeChanges();
-    printf("Motor shit applied\n");
+    // drv8908.setMotor(0, 50, FORWARD);
+    // drv8908.writeChanges();
+    // printf("Motor shit applied\n");
 
     //Checking if all hardware is connected and functioning properly:
-    //checkHardwareConnections();
+    checkHardwareConnections();
+
+    int speed = 20;
+    bool max = false;
 
     while (true)
     {
-            //drv8908.test();
-            // drv8908.printErrorStatus();
-            //  mpu9250.PrintAllSensorReadings();
+        if(!max && speed < 255) {
+            speed+=5;
+            drv8908.setMotor(0, speed, FORWARD);
+            drv8908.writeChanges();
+            thread_sleep_for(100);
+        }
+        else if(!max && speed == 255) {
+            max = true;
+            speed = 0;
+            drv8908.setMotor(0, 0, BRAKE);
+            drv8908.writeChanges();
+            printf("Max speed aquired!, bracking.....\n");
+            thread_sleep_for(10000);
+        }
 
-            // if(ak8963.IsDataReady()) {
-            //     ak8963.PrintSensorReadings();
-            // }
+        if(max && speed < 255) {
+            speed += 5;
+            drv8908.setMotor(0, speed, REVERSE);
+            drv8908.writeChanges();
+            thread_sleep_for(100);
+        }
+        else if(max && speed == 255) {
+            drv8908.disableMotor(0);
+            drv8908.writeChanges();
+            printf("Max reverse reached!\n");
+        }
+
+        // if(speed == 10) {
+        //     drv8908.printLocalConfigContent();
+        //     printf("\n\n");
+        //     drv8908.printRegisterContents();
+        // }
+
+            //drv8908.test();
 
             // HCSR04 test stuff:
             // ultrasonicRight.startMeasurement();

@@ -24,8 +24,8 @@ void HCSR04::initialize() {
     trigger.write(0);
     //echo.mode(PullUp);
 
-    echo.rise(callback(this, &HCSR04::onEchoRise)); //Event called upon receiving first wave back.
-    echo.fall(callback(this, &HCSR04::onEchoFall)); //Event called upon ending of waves.
+    //echo.rise(callback(this, &HCSR04::onEchoRise)); //Event called upon receiving first wave back.
+    //echo.fall(callback(this, &HCSR04::onEchoFall)); //Event called upon ending of waves.
 }
 
 /// @brief Start the distance measurement, needs to be called at the start.
