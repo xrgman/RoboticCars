@@ -4,7 +4,6 @@
  */
 
 #include <string>
-
 #include "mbed.h"
 #include "pinDefinitions.h"
 #include "statemachine.h"
@@ -14,8 +13,12 @@
 #include "ak8963.h"
 #include "hcsr04.h"
 #include "control.h"
+#include "timers.h"
+#include "leds.h"
 
 #define WAIT_TIME_MS 100
+
+
 
 //Function definitions:
 void state_changed_callback(Statemachine::State, Statemachine::State);
@@ -23,11 +26,8 @@ void state_changed_callback(Statemachine::State, Statemachine::State);
 //Queue to enable printf in ISR:
 EventQueue queue(32 * EVENTS_EVENT_SIZE);
 
-//The four leds of the robot:
-DigitalOut led1(LED_1_PIN);
-DigitalOut led2(LED_2_PIN);
-DigitalOut led3(LED_3_PIN);
-DigitalOut led4(LED_4_PIN);
+//The leds
+Leds leds;
 
 //Communication:
 Communication comm(Communication::SERIAL);
@@ -143,26 +143,33 @@ int main()
     //Initializig AK8963:
     ak8963.initialize(AK8963::MFS_16BITS, AK8963::MOP_CONINUES_2);
 
+    //Initializing timers:
+    initializeTimers();
+
     //Initializing motor control:
     initializeMotors();
 
     //Checking if all hardware is connected and functioning properly:
     checkHardwareConnections();
 
-    
-    
-
     while (true)
     {
-            test();
+        //Every 50ms:
+        if(checkTimerFlag()) {
 
-            // if(speed == 10) {
-            //     drv8908.printLocalConfigContent();
-            //     printf("\n\n");
-            //     drv8908.printRegisterContents();
-            // }
+            //Every minute:
+            if(systemCounter % 20 == 0) {
+                //Blink blue status led:
+                leds.toggleLed(0);
 
-            //drv8908.test();
+            }
+
+            //printf("TIMEEER\n");
+            clearTimerFlag();
+        }
+
+
+      
 
             // HCSR04 test stuff:
             // ultrasonicRight.startMeasurement();
@@ -172,21 +179,21 @@ int main()
 
             // printf("Distance %.0fmm\n\r", distance);                 //Send the value to the serial port for monitoring purposes
 
-            led1 = !led1;
-            thread_sleep_for(WAIT_TIME_MS);
-            led2 = !led2;
-            thread_sleep_for(WAIT_TIME_MS);
-            led3 = !led3;
-            thread_sleep_for(WAIT_TIME_MS);
-            led4 = !led4;
-            thread_sleep_for(WAIT_TIME_MS);
-            led4 = !led4;
-            thread_sleep_for(WAIT_TIME_MS);
-            led3 = !led3;
-            thread_sleep_for(WAIT_TIME_MS);
-            led2 = !led2;
-            thread_sleep_for(WAIT_TIME_MS);
-            led1 = !led1;
-            thread_sleep_for(WAIT_TIME_MS);
+            // led1 = !led1;
+            // thread_sleep_for(WAIT_TIME_MS);
+            // led2 = !led2;
+            // thread_sleep_for(WAIT_TIME_MS);
+            // led3 = !led3;
+            // thread_sleep_for(WAIT_TIME_MS);
+            // led4 = !led4;
+            // thread_sleep_for(WAIT_TIME_MS);
+            // led4 = !led4;
+            // thread_sleep_for(WAIT_TIME_MS);
+            // led3 = !led3;
+            // thread_sleep_for(WAIT_TIME_MS);
+            // led2 = !led2;
+            // thread_sleep_for(WAIT_TIME_MS);
+            // led1 = !led1;
+            // thread_sleep_for(WAIT_TIME_MS);
     }
 }

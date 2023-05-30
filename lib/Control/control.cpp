@@ -1,26 +1,31 @@
 #include "control.h"
 #include "pinDefinitions.h"
+#include "Util.h"
 
 
 //DRV8908 motor chip:
 DRV8908 drv8908(DRV8908_MOSI_PIN, DRV8908_MISO_PIN, DRV8908_SCK_PIN, DRV8908_NSS_PIN, DRV8908_SLEEP_PIN, DRV8908_FAULT_PIN);
 
 //Used to store new motor values, written to motors by update_motors function:
-uint8_t motor[NR_OF_MOTORS];
+uint8_t motors[NR_OF_MOTORS];
 Direction motorDirection[NR_OF_MOTORS];
 
 void update_motors() {
-
+    //Check to see if its allowed to do :)
 
     //Setting the motor values in DRV8908 chip:
     for (int i = 0; i < NR_OF_MOTORS; i++) {
         //When speed is zero, simply disable the motor:
-        if(motor[i] == 0) {
+        if(motors[i] == 0) {
             drv8908.disableMotor(i);
             continue;
         }
 
-        drv8908.setMotor(i, motor[i], motorDirection[i]);
+        //Clipping motor speed between 0 and max motor speed:
+        motors[i] = MAX(0, MIN(motors[i], MAX_MOTOR_VAL));
+
+        //Writing to the chip:
+        drv8908.setMotor(i, motors[i], motorDirection[i]);
     }
 
     drv8908.writeChanges();
@@ -28,7 +33,7 @@ void update_motors() {
 
 /// @brief Turn off all motors of the car:
 void motors_off() {
-    motor[0] = motor[1] = motor[2] = motor[3] = 0;
+    motors[0] = motors[1] = motors[2] = motors[3] = 0;
 
     update_motors();
 }
@@ -42,7 +47,7 @@ void motors_off() {
 void checkMotorMovement(Communication *comm) {
     comm->sendDebugMessage("Moving forward.....\n");
     
-    motor[0] = motor[1] = motor[2] = motor[3] = 100;
+    motors[0] = motors[1] = motors[2] = motors[3] = 100;
     update_motors();
     thread_sleep_for(500);
     motors_off();
@@ -50,7 +55,7 @@ void checkMotorMovement(Communication *comm) {
     comm->sendDebugMessage("Moving backward.....\n");
 
     setMotorDirectionAll(REVERSE);
-    motor[0] = motor[1] = motor[2] = motor[3] = 100;
+    motors[0] = motors[1] = motors[2] = motors[3] = 100;
     update_motors();
     thread_sleep_for(500);
 
@@ -108,16 +113,28 @@ void setMotorDirectionAll(Direction direction) {
     motorDirection[0] = motorDirection[1] = motorDirection[2] = motorDirection[3] = direction;
 }
 
-int speed = 20;
-bool max2 = false;
+//*****************************************
+//******** Motor information retrieval ****
+//*****************************************
 
-void test() {
-    speed += 1;
+uint8_t* getMotorSpeeds() {
+    return motors;
+}
 
-    // motor[0] = motor[1] = motor[2] = motor[3] = 100;
-    // update_motors();
+Direction* getMotorDirections() {
+    return motorDirection;
+}
 
-    // if(speed > 30) {
-    //     motors_off();
-    // }
+//*****************************************
+//******** Motor processing ***************
+//*****************************************
+
+/// @brief Process motor function, called from the main loop every ...ms.
+/// @param currentState The current state of the system.
+void processMotors(Statemachine::State currentState) {
+    switch(currentState) {
+
+    }
+
+    update_motors();
 }

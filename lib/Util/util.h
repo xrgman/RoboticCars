@@ -3,6 +3,9 @@
 
 #include "mbed.h"
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) > (y)) ? (y) : (x))
+
 class Util {
     public:
         static void printAsBinary(int number);
