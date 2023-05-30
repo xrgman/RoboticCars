@@ -31,6 +31,7 @@ class DRV8908 : IEDevice {
         DRV8908(PinName mosi, PinName miso, PinName sck, PinName nss, PinName sleep, PinName fault);
         void initialize();
         void configureMotor(uint8_t id, HalfBridge half_bridg1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay);
+        void configureMotor(uint8_t id, HalfBridge half_bridg1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay, bool isReversed);
         void setMotor(uint8_t id, uint8_t speed, Direction direction);
         void disableMotor(uint8_t id);
         void writeChanges();

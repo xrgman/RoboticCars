@@ -35,7 +35,11 @@ void DRV8908::initialize()
 //************************************
 
 void DRV8908::configureMotor(uint8_t id, HalfBridge half_bridg1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay) {
-    motors[id] = DRV89xxMotor(half_bridg1, half_bridge2, pwm_channel, reverse_delay);
+    motors[id] = DRV89xxMotor(half_bridg1, half_bridge2, pwm_channel, reverse_delay, false);
+}
+
+void DRV8908::configureMotor(uint8_t id, HalfBridge half_bridg1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay, bool isReversed) {
+    motors[id] = DRV89xxMotor(half_bridg1, half_bridge2, pwm_channel, reverse_delay, isReversed);
 }
 
 void DRV8908::setMotor(uint8_t id, uint8_t speed, Direction direction) {

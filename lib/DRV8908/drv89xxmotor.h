@@ -21,14 +21,15 @@ typedef struct {
 
 class DRV89xxMotor {
     public:
-        DRV89xxMotor() : DRV89xxMotor(NO_HALF_BRIDGE, NO_HALF_BRIDGE, PWM_CHANNEL_1, 0) {};
-        DRV89xxMotor(HalfBridge half_bridge1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay);
+        DRV89xxMotor() : DRV89xxMotor(NO_HALF_BRIDGE, NO_HALF_BRIDGE, PWM_CHANNEL_1, 0, false) {};
+        DRV89xxMotor(HalfBridge half_bridge1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay, bool isReversed);
 
         void set(uint8_t *config_cache, uint8_t speed, Direction direction);
         void disable(uint8_t *config_cache);
 
     private:
-        uint8_t reverse_delay = 0;  //number of milliseconds to brake before reversing direction
+        bool isReversed;
+        uint8_t reverse_delay = 0; // number of milliseconds to brake before reversing direction
         PWMChannel pwm_channel;
         Direction direction;
         bool enabled;

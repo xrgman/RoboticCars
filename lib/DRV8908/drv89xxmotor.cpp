@@ -1,9 +1,10 @@
 #include "drv89xxmotor.h"
 #include "drv8910registers.h"
 
-DRV89xxMotor::DRV89xxMotor(HalfBridge half_bridge1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay) {
+DRV89xxMotor::DRV89xxMotor(HalfBridge half_bridge1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay, bool isReversed) {
     this->pwm_channel = pwm_channel;
     this->reverse_delay = reverse_delay;
+    this->isReversed = isReversed;
 
     //Configuring half bridge settings:
     populateHalfbridges(0, half_bridge1);
@@ -20,25 +21,20 @@ void DRV89xxMotor::set(uint8_t *config_cache, uint8_t speed, Direction direction
     speed = speed;
     direction = direction;
 
-    switch(direction) {
-        case FORWARD: 
-            setBridgeLowsideDisablePWM(config_cache, half_bridges[0]);
-            setBridgeHighsideEnablePWM(config_cache, half_bridges[1]);
-            setPWMFrequency(config_cache, speed);
-            break;
-        case REVERSE:
-            setBridgeHighsideEnablePWM(config_cache, half_bridges[0]);
-            setBridgeLowsideDisablePWM(config_cache, half_bridges[1]);
-            setPWMFrequency(config_cache, speed);
-            break;
-        case BRAKE: 
-        default: 
-            setBridgeLowsideDisablePWM(config_cache, half_bridges[0]);
-            setBridgeLowsideDisablePWM(config_cache, half_bridges[1]);
-            break;
+    if((direction == FORWARD && !isReversed) || (direction == REVERSE && isReversed)) {
+        setBridgeLowsideDisablePWM(config_cache, half_bridges[0]);
+        setBridgeHighsideEnablePWM(config_cache, half_bridges[1]);
+        setPWMFrequency(config_cache, speed);
     }
-
-    //Update the actual things:
+    else if((direction == REVERSE && !isReversed) || (direction == FORWARD && isReversed)) {
+        setBridgeHighsideEnablePWM(config_cache, half_bridges[0]);
+        setBridgeLowsideDisablePWM(config_cache, half_bridges[1]);
+        setPWMFrequency(config_cache, speed);
+    } 
+    else {
+        setBridgeLowsideDisablePWM(config_cache, half_bridges[0]);
+        setBridgeLowsideDisablePWM(config_cache, half_bridges[1]);
+    }
 }
 
 void DRV89xxMotor::disable(uint8_t *config_cache) {

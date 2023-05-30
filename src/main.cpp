@@ -10,10 +10,10 @@
 #include "statemachine.h"
 #include "sensor.h"
 #include "communication.h"
-#include "drv8908.h"
 #include "mpu9250.h"
 #include "ak8963.h"
 #include "hcsr04.h"
+#include "control.h"
 
 #define WAIT_TIME_MS 100
 
@@ -35,8 +35,6 @@ Communication comm(Communication::SERIAL);
 //Statemachine:
 Statemachine statemachine(state_changed_callback, &comm);
 
-//DRV8908 motor chip:
-DRV8908 drv8908(DRV8908_MOSI_PIN, DRV8908_MISO_PIN, DRV8908_SCK_PIN, DRV8908_NSS_PIN, DRV8908_SLEEP_PIN, DRV8908_FAULT_PIN);
 
 //MPU9250 IMU:
 MPU9250 mpu9250(MPU9250_SCL_PIN, MPU9250_SDA_PIN, MPU9250_INT_PIN);
@@ -51,7 +49,6 @@ HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &co
 
 void printFault() {
     printf("Printing out fault information:\n\n");
-    drv8908.printErrorStatus();
 }
 
 void printTest() {
@@ -95,6 +92,18 @@ void command_callback(messageType type, uint8_t size, uint8_t command[]) {
 void state_changed_callback(Statemachine::State oldState, Statemachine::State newState) {
     //In emergency state stop all motors :)
 
+    if(newState == Statemachine::State::DRIVING_FORWARD) {
+        setMotorDirectionAll(FORWARD);
+
+        //Always disable motors when state gets changed:
+    }
+    else if (newState == Statemachine::State::DRIVING_BACKWARD) {
+        setMotorDirectionAll(REVERSE);
+
+        //Always disable motors when state gets changed:
+        
+    }
+
     //Printing state change:
     char msg[100];
 	snprintf(msg, sizeof(msg), "State changed successfully from state %s to state %s.\n", Statemachine::StateToString(oldState), Statemachine::StateToString(newState));
@@ -112,11 +121,9 @@ void checkHardwareConnections() {
     comm.sendDebugMessage("\n***** Checking sensor AK8963 *****\r\n");
     ak8963.checkDeviceOperation(&comm);
 
-    //DRV8908:
-    comm.sendDebugMessage("\n***** Checking sensor DRV8908 *****\r\n");
-    drv8908.checkDeviceOperation(&comm);
+    //Check operation of all hardware related to the motors:
+    checkMotorOperation(&comm);
 }
-
 
 //NULL IS NC :)
 int main()
@@ -136,57 +143,24 @@ int main()
     //Initializig AK8963:
     ak8963.initialize(AK8963::MFS_16BITS, AK8963::MOP_CONINUES_2);
 
-    //Initializing DRV8908 chip:
-    drv8908.initialize();
-
-    // Configuring motors (TO-DO move to seperate class):
-    //P16 -> M3 -> OUT5 (m3+), OUT6 (m3-)
-    drv8908.configureMotor(0, HALF_BRIDGE_5, HALF_BRIDGE_6, PWM_CHANNEL_1, 10);
-
-    // drv8908.setMotor(0, 50, FORWARD);
-    // drv8908.writeChanges();
-    // printf("Motor shit applied\n");
+    //Initializing motor control:
+    initializeMotors();
 
     //Checking if all hardware is connected and functioning properly:
     checkHardwareConnections();
 
-    int speed = 20;
-    bool max = false;
+    
+    
 
     while (true)
     {
-        if(!max && speed < 255) {
-            speed+=5;
-            drv8908.setMotor(0, speed, FORWARD);
-            drv8908.writeChanges();
-            thread_sleep_for(100);
-        }
-        else if(!max && speed == 255) {
-            max = true;
-            speed = 0;
-            drv8908.setMotor(0, 0, BRAKE);
-            drv8908.writeChanges();
-            printf("Max speed aquired!, bracking.....\n");
-            thread_sleep_for(10000);
-        }
+            test();
 
-        if(max && speed < 255) {
-            speed += 5;
-            drv8908.setMotor(0, speed, REVERSE);
-            drv8908.writeChanges();
-            thread_sleep_for(100);
-        }
-        else if(max && speed == 255) {
-            drv8908.disableMotor(0);
-            drv8908.writeChanges();
-            printf("Max reverse reached!\n");
-        }
-
-        // if(speed == 10) {
-        //     drv8908.printLocalConfigContent();
-        //     printf("\n\n");
-        //     drv8908.printRegisterContents();
-        // }
+            // if(speed == 10) {
+            //     drv8908.printLocalConfigContent();
+            //     printf("\n\n");
+            //     drv8908.printRegisterContents();
+            // }
 
             //drv8908.test();
 
