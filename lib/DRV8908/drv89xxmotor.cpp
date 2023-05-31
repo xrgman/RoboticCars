@@ -17,9 +17,9 @@ DRV89xxMotor::DRV89xxMotor(HalfBridge half_bridge1, HalfBridge half_bridge2, PWM
 
 void DRV89xxMotor::set(uint8_t *config_cache, uint8_t speed, Direction direction) {
     //Is this even usefull?
-    enabled = true;
-    speed = speed;
-    direction = direction;
+    this->enabled = true;
+    this->speed = speed;
+    this->direction = direction;
 
     if((direction == FORWARD && !isReversed) || (direction == REVERSE && isReversed)) {
         setBridgeLowsideDisablePWM(config_cache, half_bridges[0]);
@@ -38,10 +38,15 @@ void DRV89xxMotor::set(uint8_t *config_cache, uint8_t speed, Direction direction
 }
 
 void DRV89xxMotor::disable(uint8_t *config_cache) {
-    enabled = false;
+    this->enabled = false;
+    this->speed = 0;
 
     setBridgeOpen(config_cache, half_bridges[0]);
     setBridgeOpen(config_cache, half_bridges[1]);
+}
+
+uint8_t DRV89xxMotor::get() {
+    return speed;
 }
 
 //*****************************************

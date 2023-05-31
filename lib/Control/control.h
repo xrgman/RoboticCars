@@ -7,7 +7,9 @@
 #include "statemachine.h"
 
 #define NR_OF_MOTORS 4
+#define MIN_MOTOR_VAL 60
 #define MAX_MOTOR_VAL 200 //Only allow motors to speed up x%
+
 
 void checkMotorOperation(Communication *comm);
 void initializeMotors();

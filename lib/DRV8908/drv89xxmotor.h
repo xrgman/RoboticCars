@@ -26,6 +26,7 @@ class DRV89xxMotor {
 
         void set(uint8_t *config_cache, uint8_t speed, Direction direction);
         void disable(uint8_t *config_cache);
+        uint8_t get();
 
     private:
         bool isReversed;
@@ -33,6 +34,7 @@ class DRV89xxMotor {
         PWMChannel pwm_channel;
         Direction direction;
         bool enabled;
+        uint8_t speed;
 
         DRV89xxHalfBridge half_bridges[2];
 

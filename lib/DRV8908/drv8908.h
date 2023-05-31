@@ -33,6 +33,7 @@ class DRV8908 : IEDevice {
         void configureMotor(uint8_t id, HalfBridge half_bridg1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay);
         void configureMotor(uint8_t id, HalfBridge half_bridg1, HalfBridge half_bridge2, PWMChannel pwm_channel, uint8_t reverse_delay, bool isReversed);
         void setMotor(uint8_t id, uint8_t speed, Direction direction);
+        uint8_t getMotor(uint8_t id);
         void disableMotor(uint8_t id);
         void writeChanges();
 

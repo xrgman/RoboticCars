@@ -46,6 +46,10 @@ void DRV8908::setMotor(uint8_t id, uint8_t speed, Direction direction) {
     motors[id].set(config_cache, speed, direction);
 }
 
+uint8_t DRV8908::getMotor(uint8_t id) {
+    return motors[id].get();
+}
+
 /// @brief Disable a specific motor.
 /// @param id The id of the motor that needs to be disabled.
 void DRV8908::disableMotor(uint8_t id) {

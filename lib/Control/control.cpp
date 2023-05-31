@@ -2,7 +2,6 @@
 #include "pinDefinitions.h"
 #include "Util.h"
 
-
 //DRV8908 motor chip:
 DRV8908 drv8908(DRV8908_MOSI_PIN, DRV8908_MISO_PIN, DRV8908_SCK_PIN, DRV8908_NSS_PIN, DRV8908_SLEEP_PIN, DRV8908_FAULT_PIN);
 
@@ -11,10 +10,20 @@ uint8_t motors[NR_OF_MOTORS];
 Direction motorDirection[NR_OF_MOTORS];
 
 void update_motors() {
-    //Check to see if its allowed to do :)
+    // Check to see if its allowed to do :)
+
+    // Checking if config needs to be rewritten:
+    bool configChanged = false;
 
     //Setting the motor values in DRV8908 chip:
     for (int i = 0; i < NR_OF_MOTORS; i++) {
+        //Skipping motor that does not change speed:
+        if(drv8908.getMotor(i) == motors[i]) {
+            continue;
+        }
+
+        configChanged = true;
+
         //When speed is zero, simply disable the motor:
         if(motors[i] == 0) {
             drv8908.disableMotor(i);
@@ -28,7 +37,10 @@ void update_motors() {
         drv8908.setMotor(i, motors[i], motorDirection[i]);
     }
 
-    drv8908.writeChanges();
+    //Writing changes to the chip:
+    if(configChanged) {
+        drv8908.writeChanges();
+    }
 }
 
 /// @brief Turn off all motors of the car:
@@ -129,12 +141,48 @@ Direction* getMotorDirections() {
 //******** Motor processing ***************
 //*****************************************
 
+/// @brief Affect the motor behaviour based on the fact that the state of the system is Emergecy. Slowly slow down and stop the car.
+
+void processEmergencyMode() {
+
+    //If below turn medium, shut down motors:
+    if(motors[0] <= MIN_MOTOR_VAL && motors[1] <= MIN_MOTOR_VAL && motors[2] <= MIN_MOTOR_VAL && motors[3] <= MIN_MOTOR_VAL) {
+        motors_off();
+
+        return;
+    }
+
+    //Decreasing motor speed by %:
+    for (int i = 0; i < NR_OF_MOTORS; i++) {
+        if(motors[i] >= MIN_MOTOR_VAL) {
+            motors[i] --; 
+        }
+    }
+
+    update_motors();
+
+    //printf("Motor val: %d\n", motors[0]);
+}
+
+void processManualMode() {
+    motors[0] = motors[1] = motors[2] = motors[3] = 200;
+    update_motors();
+}
+
 /// @brief Process motor function, called from the main loop every ...ms.
 /// @param currentState The current state of the system.
 void processMotors(Statemachine::State currentState) {
     switch(currentState) {
-
-    }
+        case Statemachine::State::IDLE:
+            motors_off();
+            break;
+        case Statemachine::State::EMERGENCY:
+            processEmergencyMode();
+            break;
+        case Statemachine::State::MANUAL:
+            processManualMode();
+            break;
+        }
 
     update_motors();
 }

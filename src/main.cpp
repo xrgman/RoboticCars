@@ -18,10 +18,11 @@
 
 #define WAIT_TIME_MS 100
 
-
-
 //Function definitions:
 void state_changed_callback(Statemachine::State, Statemachine::State);
+
+//Timeouts:
+Timeout emergencyTimeout;
 
 //Queue to enable printf in ISR:
 EventQueue queue(32 * EVENTS_EVENT_SIZE);
@@ -56,6 +57,10 @@ void printTest() {
     // drv8908.Test();
 }
 
+void disableEmergencyMode() {
+    statemachine.changeState(Statemachine::State::IDLE);
+}
+
 void command_callback(messageType type, uint8_t size, uint8_t command[]) {
     switch(type) {
         case TEST: //Used for printing test information:
@@ -74,7 +79,7 @@ void command_callback(messageType type, uint8_t size, uint8_t command[]) {
             break;
         case MODE: {
             //Extracting state to change into:
-            Statemachine::State newState = (Statemachine::State)(command[0]-48); //TO-DO remove when typing testing is done :)
+            Statemachine::State newState = (Statemachine::State)(command[0]); //TO-DO remove when typing testing is done :)
             
             //Changing the state:
             statemachine.changeState(newState);
@@ -90,25 +95,37 @@ void command_callback(messageType type, uint8_t size, uint8_t command[]) {
 /// @param oldState State before the change.
 /// @param newState State after the change.
 void state_changed_callback(Statemachine::State oldState, Statemachine::State newState) {
-    //In emergency state stop all motors :)
-
-    if(newState == Statemachine::State::DRIVING_FORWARD) {
-        setMotorDirectionAll(FORWARD);
-
-        //Always disable motors when state gets changed:
+    //Emergency mode actions:
+    if(newState != Statemachine::State::EMERGENCY) {
+        leds.disableLed(YELLOW);
     }
-    else if (newState == Statemachine::State::DRIVING_BACKWARD) {
-        setMotorDirectionAll(REVERSE);
+    else {
+        //Disable Emergency mode automatically after 3 seconds:
+        if(emergencyTimeout.remaining_time().count() <= 0) {
+            emergencyTimeout.attach(&disableEmergencyMode, 3s);
+        }
+    }
 
-        //Always disable motors when state gets changed:
+
+
+    // if(newState == Statemachine::State::DRIVING_FORWARD) {
+    //     setMotorDirectionAll(FORWARD);
+
+    //     //Always disable motors when state gets changed:
+    // }
+    // else if (newState == Statemachine::State::DRIVING_BACKWARD) {
+    //     setMotorDirectionAll(REVERSE);
+
+    //     //Always disable motors when state gets changed:
         
-    }
+    // }
 
     //Printing state change:
     char msg[100];
 	snprintf(msg, sizeof(msg), "State changed successfully from state %s to state %s.\n", Statemachine::StateToString(oldState), Statemachine::StateToString(newState));
     comm.sendDebugMessage(msg);
 }
+
 
 void checkHardwareConnections() {
     comm.sendDebugMessage("\n***** Starting hardware connectivity check *****\r\n");
@@ -156,44 +173,29 @@ int main()
     {
         //Every 50ms:
         if(checkTimerFlag()) {
+            //Emergency mode yellow led blink:
+            if(statemachine.getCurrentState() == Statemachine::State::EMERGENCY && systemCounter % 2 == 0) {
+                leds.toggleLed(YELLOW);
+            }
 
-            //Every minute:
+            //Every second:
             if(systemCounter % 20 == 0) {
                 //Blink blue status led:
-                leds.toggleLed(0);
+                if(leds.getCurrentEffect() == Leds::Effect::NONE) {
+                    leds.toggleLed(BLUE);
+                }
 
+                
             }
+
+            //Processing led effects:
+            leds.processLedEffect(systemCounter);
 
             //printf("TIMEEER\n");
             clearTimerFlag();
         }
 
-
-      
-
-            // HCSR04 test stuff:
-            // ultrasonicRight.startMeasurement();
-            // distance = ultrasonicRight.getDistanceCmBlocking();
-            // while(!ultrasonicRight.isNewDataReady());
-            // printf("Distances, front: NO cm, right: %d cm\n", ultrasonicRight.getDistanceCm());
-
-            // printf("Distance %.0fmm\n\r", distance);                 //Send the value to the serial port for monitoring purposes
-
-            // led1 = !led1;
-            // thread_sleep_for(WAIT_TIME_MS);
-            // led2 = !led2;
-            // thread_sleep_for(WAIT_TIME_MS);
-            // led3 = !led3;
-            // thread_sleep_for(WAIT_TIME_MS);
-            // led4 = !led4;
-            // thread_sleep_for(WAIT_TIME_MS);
-            // led4 = !led4;
-            // thread_sleep_for(WAIT_TIME_MS);
-            // led3 = !led3;
-            // thread_sleep_for(WAIT_TIME_MS);
-            // led2 = !led2;
-            // thread_sleep_for(WAIT_TIME_MS);
-            // led1 = !led1;
-            // thread_sleep_for(WAIT_TIME_MS);
+        //TO-DO check if frequency is right: its too fast I guesss
+        processMotors(statemachine.getCurrentState());
     }
 }

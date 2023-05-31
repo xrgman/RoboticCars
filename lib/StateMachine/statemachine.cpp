@@ -15,10 +15,10 @@ void Statemachine::changeState(State newState) {
 
     //Checking if new state exists:
     if(newState >= NUMBER_OF_STATES) {
-        snprintf(msg, sizeof(msg), "State with id %d does not exist.\n", newState);
+        snprintf(msg, sizeof(msg), "State with id %d does not exist. Going to emergency mode\n", newState);
         communication->sendDebugMessage(msg);
 
-        return;
+        newState = EMERGENCY;
     }
 
     //Checking if new state is different from previous state:
@@ -60,10 +60,10 @@ char const * Statemachine::StateToString(State state) {
             return "Emergency";
         case CALIBRATION:
             return "CALIBRATION";
-        case DRIVING_FORWARD:
-            return "DRIVING_FORWARD";
-        case DRIVING_BACKWARD:
-            return "DRIVING_BACKWARD";
+        case MANUAL:
+            return "MANUAL";
+        case PLACE_HOLDER:
+            return "PLACE_HOLDER";
         default:
             return "Not defined";
     }

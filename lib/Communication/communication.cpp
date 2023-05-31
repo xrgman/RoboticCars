@@ -93,24 +93,23 @@ void Communication::sendByte(uint8_t byte) {
 /// @brief Receive and unpack the communication protocol, automatically called by interrupt.
 /// @param byte The received byte.
 void Communication::processReceivedByte(uint8_t byte) {
-    //Detecting start character:
+    // Detecting start character:
     if (receiving_data.status == msgStatus::IDLE && byte == '?') {
         receiving_data.status = msgStatus::TYPE;
     }
     //Retreiving the message type:
     else if(receiving_data.status == msgStatus::TYPE) {
-        receiving_data.type = (messageType) (byte - 48); //TODO remove -48 once manual testing is over :)
+        receiving_data.type = (messageType) (byte); 
         receiving_data.status = msgStatus::SIZE;
     }
     //Retreiving the data length:
     else if(receiving_data.status == msgStatus::SIZE) {
-        receiving_data.data_size = byte - 48; //TODO remove -48 once manual testing is over :)
+        receiving_data.data_size = byte; 
         receiving_data.status = msgStatus::DATA;
     }
     //Retreiving the data:
     else if(receiving_data.status == msgStatus::DATA) {
-        //TODO some things :)
-        if(byte == '\n') {
+        if(receiving_data.idx >= receiving_data.data_size) {
             // Printing received message
             char msg[28+receiving_data.data_size];
             snprintf(msg, sizeof(msg), "Type: %d, size: %d, data: %s.\n", receiving_data.type, receiving_data.data_size, receiving_data.data);
