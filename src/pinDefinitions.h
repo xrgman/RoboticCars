@@ -37,6 +37,12 @@
 #define SERIAL_TX_PIN USBTX
 #define SERIAL_RX_PIN USBRX
 
+//***** ESP32 pins *****
+#define ESP32_TX_PIN PE_0
+#define ESP32_RX_PIN PE_1
+#define ESP32_GPIO1_PIN PC_14
+#define ESP32_GPIO2_PIN PC_15
+
 
 
 //***** *****

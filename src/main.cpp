@@ -61,7 +61,7 @@ void disableEmergencyMode() {
     statemachine.changeState(Statemachine::State::IDLE);
 }
 
-void command_callback(messageType type, uint8_t size, uint8_t command[]) {
+void command_callback(MessageType type, uint8_t size, uint8_t command[]) {
     switch(type) {
         case TEST: //Used for printing test information:
             if(size >= 1) {
@@ -84,6 +84,10 @@ void command_callback(messageType type, uint8_t size, uint8_t command[]) {
             //Changing the state:
             statemachine.changeState(newState);
 
+            break;
+        }
+        case CONTROL: {
+            processControlCommand(&comm, command);
             break;
         }
         default:
@@ -154,6 +158,9 @@ int main()
     //Intializing serial connection:
     comm.initialize(command_callback);
 
+    //comm.setCommunicationState(Communication::SERIAL);
+    comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
+
     //Initializing MPU9250 chip:
     mpu9250.initialize(MPU9250::GFS_250DPS, MPU9250::AFS_2G);
 
@@ -185,7 +192,7 @@ int main()
                     leds.toggleLed(BLUE);
                 }
 
-                
+                comm.sendDebugMessage("Test\n");
             }
 
             //Processing led effects:

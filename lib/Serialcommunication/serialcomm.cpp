@@ -1,6 +1,6 @@
 #include "serialcomm.h"
 
-SerialComm::SerialComm(PinName tx, PinName rx) : serial_connection(tx, rx)
+SerialComm::SerialComm(PinName tx, PinName rx, int baudrate) : serial_connection(tx, rx, baudrate)
 {
     this->rxPin = rx;
     this->txPin = tx;

@@ -1,4 +1,5 @@
 #include "control.h"
+#include "controlconfiguration.h"
 #include "pinDefinitions.h"
 #include "Util.h"
 
@@ -8,6 +9,11 @@ DRV8908 drv8908(DRV8908_MOSI_PIN, DRV8908_MISO_PIN, DRV8908_SCK_PIN, DRV8908_NSS
 //Used to store new motor values, written to motors by update_motors function:
 uint8_t motors[NR_OF_MOTORS];
 Direction motorDirection[NR_OF_MOTORS];
+
+//Currently pressed controls:
+Controls controls;
+
+ControlConfiguration configuration;
 
 void update_motors() {
     // Check to see if its allowed to do :)
@@ -48,6 +54,30 @@ void motors_off() {
     motors[0] = motors[1] = motors[2] = motors[3] = 0;
 
     update_motors();
+}
+
+//************************************************
+//******** Control functions *********************
+//************************************************
+
+void adjustThrottle(int delta) {
+    configuration.throttle += delta;
+
+    //Bound between -100 and 100:
+    configuration.throttle = configuration.throttle > 100 ? 100 : configuration.throttle;
+    configuration.throttle = configuration.throttle < -100 ? -100 : configuration.throttle;
+}
+
+void adjustAngle(int delta) {
+    configuration.angle += delta;
+
+    //Bound between -100 and 100:
+    configuration.angle = configuration.throttle > 100 ? 100 : configuration.throttle;
+    configuration.angle = configuration.throttle < -100 ? -100 : configuration.throttle;
+}
+
+void startPivot(int degrees) {
+    configuration.pivot = degrees;
 }
 
 //************************************************
@@ -116,7 +146,7 @@ void initializeMotors() {
 /// @param motorId The id of the motor.
 /// @param direction The new direction of the motor, Forward, Reverse, Brake.
 void setMotorDirection(uint8_t motorId, Direction direction) {
-    motorDirection[0] = direction;
+    motorDirection[motorId] = direction;
 }
 
 /// @brief Set the direction of all motors. 
@@ -159,14 +189,49 @@ void processEmergencyMode() {
         }
     }
 
-    update_motors();
-
     //printf("Motor val: %d\n", motors[0]);
+
+    //Instead of this just increase throttle :/
 }
 
 void processManualMode() {
-    motors[0] = motors[1] = motors[2] = motors[3] = 200;
-    update_motors();
+    //Setting motor directions:
+    if(configuration.pivot > 0) {
+        //Right motors backward left forward:
+        setMotorDirection(MOTOR_FRONT_LEFT, FORWARD);
+        setMotorDirection(MOTOR_BACK_LEFT, FORWARD);
+        setMotorDirection(MOTOR_FRONT_RIGHT, REVERSE);
+        setMotorDirection(MOTOR_BACK_RIGHT, REVERSE);
+
+        //printf("Directions: %d, %d, %d, %d", motorDirection[0], motorDirection[1], motorDirection[2], motorDirection[3]);
+    }
+    else if(configuration.pivot < 0) {
+        setMotorDirection(MOTOR_FRONT_LEFT, REVERSE);
+        setMotorDirection(MOTOR_BACK_LEFT, REVERSE);
+        setMotorDirection(MOTOR_FRONT_RIGHT, FORWARD);
+        setMotorDirection(MOTOR_BACK_RIGHT, FORWARD);
+    }
+    else {
+        setMotorDirectionAll(configuration.throttle < 0 ? REVERSE : FORWARD);
+    }
+
+    uint8_t motor_speed;
+
+    //Set pivor speed:
+    if(configuration.pivot != 0) {
+        motor_speed = 255; //Guess?
+    }
+    else {
+        uint8_t throttlePercentage = abs(configuration.throttle);
+        motor_speed = MIN_MOTOR_VAL + (((MAX_MOTOR_VAL - MIN_MOTOR_VAL) / 100) * throttlePercentage);
+
+        if(configuration.throttle == 0) {
+            motor_speed = 0;
+        }
+    }
+
+    //Too simple, setting motor speed:
+    motors[0] = motors[1] = motors[2] = motors[3] = motor_speed;
 }
 
 /// @brief Process motor function, called from the main loop every ...ms.
@@ -185,4 +250,46 @@ void processMotors(Statemachine::State currentState) {
         }
 
     update_motors();
+}
+
+void processControlCommand(Communication* comm, uint8_t command[]) {
+    ControlCommandType type = (ControlCommandType) command[0];
+    bool increase;
+    uint8_t data;
+
+    switch(type) {
+        case RST:
+            configuration = EmptyConfiguration;
+            break;
+        case CONTROLS:
+            Controls newControls;
+
+            newControls.forward = command[1];
+            newControls.backward = command[2];
+            newControls.left = command[3];
+            newControls.right = command[4];
+            newControls.pivotLeft = command[5];
+            newControls.pivotRight = command[6];
+
+            controls = newControls;
+            break;
+        case THROTTLE:
+            increase = command[1];
+            data = command[2];
+
+            adjustThrottle(increase ? data : -data);
+            break;
+        case ANGLE:
+            increase = command[1];
+            data = command[2];
+
+            adjustAngle(increase ? data : -data);
+            break;
+        case PIVOT:
+            increase = command[1];
+            data = command[2];
+
+            startPivot(increase ? data : -data);
+            break;
+        }
 }
