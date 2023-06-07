@@ -1,13 +1,23 @@
 #include "communicationDefinitions.h"
+#include "BluetoothSerial.h"
 
 #define ESP32_BAUDRATE 115200
 #define ESP32_ONBOARD_LED_PIN 2
+#define ESP32_DEVICE_NAME "Robotic car - ESP32"
 #define STM32_RX_PIN 16
 #define STM32_TX_PIN 17
 #define BUF_SIZE 50
 
 //Function definitions:
-void handleSerial2Input(byte r);
+void handleSerialInput(ReceivingData *receiving_data, byte r, void (*callback)(MessageType, RelayOver, uint8_t, uint8_t*));
+void processReceivedMessage(MessageType type, RelayOver relayOver, uint8_t data_size, uint8_t *data);
+
+//Serial processing:
+ReceivingData receiving_data_stm32;
+ReceivingData receiving_data_bluetooth;
+
+//Bluetooth:
+BluetoothSerial SerialBT;
 
 //Main loop timer fields:
 hw_timer_t *mainLoopTimer = NULL;
@@ -20,9 +30,22 @@ void IRAM_ATTR onMainTimer(){
   programCounter++;
 }
 
+void callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
+  if(event == ESP_SPP_SRV_OPEN_EVT){
+    Serial.println("Client Connected");
+  }
+ 
+  if(event == ESP_SPP_CLOSE_EVT ){
+    Serial.println("Client disconnected");
+  }
+}
+
 void setup() {
   Serial.begin(ESP32_BAUDRATE);
   Serial2.begin(ESP32_BAUDRATE);
+  SerialBT.begin(ESP32_DEVICE_NAME, false);
+  SerialBT.setTimeout(5000);
+  SerialBT.register_callback(callback);
 
   pinMode(ESP32_ONBOARD_LED_PIN, OUTPUT);
 
@@ -36,7 +59,12 @@ void setup() {
 void loop() {
   //Reading serial input from STM32:
   if(Serial2.available()) {
-    handleSerial2Input(Serial2.read());
+    processReceivedByte(&receiving_data_stm32, Serial2.read(), &processReceivedMessage);
+  }
+
+  //Reading serial from bluetooth:
+  if(SerialBT.available()) {
+    processReceivedByte(&receiving_data_bluetooth, SerialBT.read(), &processReceivedMessage);
   }
 
   //Every 50ms:
@@ -47,7 +75,6 @@ void loop() {
 
       //Blink blue status led:
       digitalWrite(ESP32_ONBOARD_LED_PIN, !digitalRead(ESP32_ONBOARD_LED_PIN));
-
     }
 
     //Clearing timer flag:
@@ -56,14 +83,20 @@ void loop() {
 }
 
 //Serial stuff:
-ReceivingData receiving_data;
+
 
 void sendByte(RelayOver sendOver, byte b) {
   switch(sendOver) {
     case SERIAL_WIRE:
       Serial.print((char) b);
       break;
+    case SERIAL_WIRE_STM32:
+      //Serial.print((char) b);
+      Serial2.print((char) b);
+      break;
     case BLUETOOTH:
+      // Serial.print((char) b);
+      SerialBT.print((char) b);
       break;
     default:
       //TODO some error
@@ -74,8 +107,13 @@ void sendByte(RelayOver sendOver, byte b) {
 void sendMessage(RelayOver sendOver, MessageType type, uint8_t size, uint8_t* data) {
     uint8_t checkSum = 0;
 
+    //Sending start byte:
     sendByte(sendOver, '?');
     checkSum ^= '?';
+
+    //Sending relay over byte:
+    sendByte(sendOver, NONE);
+    checkSum ^= NONE;
 
     //Sending message type:
     sendByte(sendOver, type);
@@ -95,50 +133,26 @@ void sendMessage(RelayOver sendOver, MessageType type, uint8_t size, uint8_t* da
 }
 
 void processReceivedMessage(MessageType type, RelayOver relayOver, uint8_t data_size, uint8_t *data) {
-    if(relayOver == BLUETOOTH) { //change to not equal none and just pass the relayover
-      //Serial.println("Relaying message over bluetooth");
-      sendMessage(SERIAL_WIRE, type, data_size, data);
-      //Just pass it on to bluettoth
+    //Passing message if needed:
+    //Serial.println("Received something :)");
+
+    if(relayOver != NONE) { 
+      sendMessage(relayOver, type, data_size, data);
+
+      return;
     }
+    else {
+      switch(type) {
+        case DEBUG:
+          for(int i = 0; i < data_size; i++) {
+            Serial.print((char) data[i]);
+          }
+          break;
+      }
+    }
+
+    //Process message:
+   
 
 }
 
-void handleSerial2Input(byte r) {
-    // Detecting start character:
-    if (receiving_data.status == MessageStatus::IDLE && r == '?') {
-        receiving_data.status = MessageStatus::RELAY;
-    }
-    //Retreiving relay over type:
-    else if(receiving_data.status == MessageStatus::RELAY) {
-        receiving_data.relayOver = (RelayOver) (r); 
-        receiving_data.status = MessageStatus::TYPE;
-    }
-    //Retreiving the message type:
-    else if(receiving_data.status == MessageStatus::TYPE) {
-        receiving_data.type = (MessageType) (r); 
-        receiving_data.status = MessageStatus::SIZE;
-    }
-    //Retreiving the data length:
-    else if(receiving_data.status == MessageStatus::SIZE) {
-        receiving_data.data_size = r; 
-        receiving_data.status = MessageStatus::DATA;
-    }
-    //Retreiving the data:
-    else if(receiving_data.status == MessageStatus::DATA) {
-        if(receiving_data.idx >= receiving_data.data_size) {
-            // Printing received message
-
-            //Processing message:
-            processReceivedMessage(receiving_data.type, receiving_data.relayOver, receiving_data.data_size, receiving_data.data);
-
-            //Resetting buffer:
-            receiving_data.status = MessageStatus::IDLE;
-            receiving_data.idx = 0;
-
-            return;
-        }
-        
-        receiving_data.data[receiving_data.idx] = r;
-        receiving_data.idx++;
-    }
-}

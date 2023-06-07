@@ -36,7 +36,6 @@ Communication comm(Communication::SERIAL);
 //Statemachine:
 Statemachine statemachine(state_changed_callback, &comm);
 
-
 //MPU9250 IMU:
 MPU9250 mpu9250(MPU9250_SCL_PIN, MPU9250_SDA_PIN, MPU9250_INT_PIN);
 
@@ -61,30 +60,34 @@ void disableEmergencyMode() {
     statemachine.changeState(Statemachine::State::IDLE);
 }
 
-void command_callback(MessageType type, uint8_t size, uint8_t command[]) {
-    switch(type) {
-        case TEST: //Used for printing test information:
-            if(size >= 1) {
-                switch(command[0]) {
-                    case 'p':
-                        queue.call(printFault);
-                        break;
-                    case 't':
-                        queue.call(printTest);
-                        break;
-                    default:
-                        break;
-                }
+void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8_t command[]) {
+    switch (type)
+    {
+    case TEST: // Used for printing test information:
+        if (size >= 1)
+        {
+            switch (command[0])
+            {
+            case 'p':
+                queue.call(printFault);
+                break;
+            case 't':
+                queue.call(printTest);
+                break;
+            default:
+                break;
             }
-            break;
-        case MODE: {
-            //Extracting state to change into:
-            Statemachine::State newState = (Statemachine::State)(command[0]); //TO-DO remove when typing testing is done :)
-            
-            //Changing the state:
-            statemachine.changeState(newState);
+        }
+        break;
+    case MODE:
+    {
+        // Extracting state to change into:
+        Statemachine::State newState = (Statemachine::State)(command[0]); // TO-DO remove when typing testing is done :)
 
-            break;
+        // Changing the state:
+        statemachine.changeState(newState);
+
+        break;
         }
         case CONTROL: {
             processControlCommand(&comm, command);
@@ -92,7 +95,7 @@ void command_callback(MessageType type, uint8_t size, uint8_t command[]) {
         }
         default:
             break;
-    }
+        }
 }
 
 /// @brief Called when state is changed, can be used to execute certain actions based on the previous and new states.
@@ -150,8 +153,11 @@ void checkHardwareConnections() {
 int main()
 {
     //Printing welcome message:
-    printf("Robotic car - Running Mbed OS version %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
-    
+    char msg[45];
+	snprintf(msg, sizeof(msg), "Robotic car - Running Mbed OS version %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
+    comm.sendDebugMessage(msg);
+
+
     Thread eventThread2;
     eventThread2.start(callback(&queue, &EventQueue::dispatch_forever));
 
@@ -192,7 +198,7 @@ int main()
                     leds.toggleLed(BLUE);
                 }
 
-                comm.sendDebugMessage("Test\n");
+                //comm.sendDebugMessage("Test\n");
             }
 
             //Processing led effects:

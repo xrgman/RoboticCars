@@ -3,7 +3,7 @@
 
 #include "stdint.h"
 
-#define COMM_BUF_SIZE 50
+#define COMM_BUF_SIZE 250
 
 typedef enum
 {
@@ -19,6 +19,7 @@ typedef enum
 {
     NONE,
     SERIAL_WIRE,
+    SERIAL_WIRE_STM32,
     BLUETOOTH,
     WIFI
 } RelayOver;
@@ -42,5 +43,7 @@ typedef struct
     uint8_t data[COMM_BUF_SIZE];
     uint8_t idx;
 } ReceivingData;
+
+extern void processReceivedByte(ReceivingData *receiving_data, uint8_t r, void (*callback)(MessageType, RelayOver, uint8_t, uint8_t*));
 
 #endif

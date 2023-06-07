@@ -1,21 +1,23 @@
 #include "communication.h"
 #include "pinDefinitions.h"
+#include "../ESP32/esp32_sketch/communicationDefinitions.cpp" //BAD but works for now :)
+
 
 /// @brief Constructor.
 /// @param communicationState Set the default communication method upon initialisation.
 Communication::Communication(CommunicationState communicationState) 
-    : serialCommunication(SERIAL_TX_PIN, SERIAL_RX_PIN, 9600), 
+    : serialCommunication(SERIAL_TX_PIN, SERIAL_RX_PIN, 115200), 
         esp32BluetoothCommunication(ESP32_RX_PIN, ESP32_TX_PIN, 115200)  {
     currentCommState = communicationState;
 }
 
 /// @brief Initialize the communication protocol, automatically initializes all underlying ways of communication.
 /// @param processed_data_callaback Callback to be called after deciphering the received data.
-void Communication::initialize(Callback<void(MessageType type, uint8_t size, uint8_t data[])> processed_data_callaback) {
+void Communication::initialize(void (*processed_data_callaback)(MessageType, RelayOver, uint8_t, uint8_t*)) {
     this->processed_data_callaback = processed_data_callaback;
 
-    serialCommunication.initialize(callback(this, &Communication::processReceivedByte));
-    esp32BluetoothCommunication.initialize(callback(this, &Communication::processReceivedByte));
+    serialCommunication.initialize(callback(this, &Communication::receivedByteSerial));
+    esp32BluetoothCommunication.initialize(callback(this, &Communication::receivedByteBluetoothESP32));
 }
 
 /// @brief Change the state of the communication protocol.
@@ -34,8 +36,10 @@ void Communication::setCommunicationState(CommunicationState newState) {
             return;
     }
 
+
+
     char msg[100];
-	snprintf(msg, sizeof(msg), "Changing communication state to: %s", stateToString(newState));
+	snprintf(msg, sizeof(msg), "Changing communication state to: %s\n", stateToString(newState));
     sendDebugMessage(msg);
 
     currentCommState = newState;
@@ -63,12 +67,13 @@ void Communication::sendMessage(MessageType type, uint8_t size, uint8_t* data, b
 
     // Sending whether the message is for the ESP32 itself or if it should only relay it onto it's bluetooth line:
     //Should be done for all devices capable of this, like a pi and the onboard chip.
-    if (currentCommState == BLUETOOTH_ESP32)
-    {
-        sendByte(relayMessage ? BLUETOOTH : NONE);
-        checkSum ^= relayMessage ? BLUETOOTH : NONE;
-    }
+    RelayOver relay = !relayMessage                         ? NONE
+                      : currentCommState == BLUETOOTH_ESP32 ? BLUETOOTH
+                                                            : NONE;
 
+    sendByte(relay);
+    checkSum ^= relay;
+    
     //Sending message type:
     sendByte(type);
     checkSum ^= type;
@@ -116,44 +121,14 @@ void Communication::sendByte(uint8_t byte) {
     }
 }
 
-/// @brief Receive and unpack the communication protocol, automatically called by interrupt.
-/// @param byte The received byte.
-void Communication::processReceivedByte(uint8_t byte) {
-    // Detecting start character:
-    if (receiving_data.status == MessageStatus::IDLE && byte == '?') {
-        receiving_data.status = MessageStatus::TYPE;
-    }
-    //Retreiving the message type:
-    else if(receiving_data.status == MessageStatus::TYPE) {
-        receiving_data.type = (MessageType) (byte); 
-        receiving_data.status = MessageStatus::SIZE;
-    }
-    //Retreiving the data length:
-    else if(receiving_data.status == MessageStatus::SIZE) {
-        receiving_data.data_size = byte; 
-        receiving_data.status = MessageStatus::DATA;
-    }
-    //Retreiving the data:
-    else if(receiving_data.status == MessageStatus::DATA) {
-        if(receiving_data.idx >= receiving_data.data_size) {
-            // Printing received message
-            char msg[28+receiving_data.data_size];
-            snprintf(msg, sizeof(msg), "Type: %d, size: %d, data: %s.\n", receiving_data.type, receiving_data.data_size, receiving_data.data);
-            //sendDebugMessage(msg);
+void Communication::receivedByteSerial(uint8_t byte) {
+    
 
-            //Processing message:
-            processed_data_callaback(receiving_data.type, receiving_data.data_size, receiving_data.data);
+    processReceivedByte(&receiving_data, byte, processed_data_callaback);
+}
 
-            //Resetting buffer:
-            receiving_data.status = MessageStatus::IDLE;
-            receiving_data.idx = 0;
-
-            return;
-        }
-        
-        receiving_data.data[receiving_data.idx] = byte;
-        receiving_data.idx++;
-    }
+void Communication::receivedByteBluetoothESP32(uint8_t byte) {
+    processReceivedByte(&receiving_data_bluetooth_ESP32, byte, processed_data_callaback);
 }
 
 char const* Communication::stateToString(CommunicationState state) {

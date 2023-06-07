@@ -21,7 +21,7 @@ class Statemachine {
         State getCurrentState() { return getCurrentState(false); };
         State getCurrentState(bool print);
 
-        static char const* StateToString(State state);
+        static char* StateToString(State state);
     private:
         State currentState;
         Callback<void(State, State)> state_changed_callback;

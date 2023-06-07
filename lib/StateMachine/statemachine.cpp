@@ -52,7 +52,7 @@ Statemachine::State Statemachine::getCurrentState(bool print) {
     return currentState;
 }
 
-char const * Statemachine::StateToString(State state) {
+char* Statemachine::StateToString(State state) {
     switch(state) {
         case IDLE:
             return "IDLE";

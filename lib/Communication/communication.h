@@ -16,7 +16,7 @@ class Communication {
         } CommunicationState;
 
         Communication(CommunicationState communicationState);
-        void initialize(Callback<void(MessageType type, uint8_t size, uint8_t data[])> processed_data_callaback);
+        void initialize(void (*processed_data_callaback)(MessageType, RelayOver, uint8_t, uint8_t*));
         void setCommunicationState(CommunicationState newState);
         void sendDebugMessage(const char *message);
         void sendMessage(MessageType type, uint8_t size, uint8_t* data);
@@ -26,13 +26,15 @@ class Communication {
         SerialComm serialCommunication;
         SerialComm esp32BluetoothCommunication;
         CommunicationState currentCommState;
-        Callback<void(MessageType type, uint8_t size, uint8_t msg[])> processed_data_callaback;
+        void (*processed_data_callaback)(MessageType, RelayOver, uint8_t, uint8_t *);
 
         void sendByte(uint8_t byte);
-        void processReceivedByte(uint8_t byte);
+        void receivedByteSerial(uint8_t byte);
+        void receivedByteBluetoothESP32(uint8_t byte);
         char const* stateToString(CommunicationState state);
 
         ReceivingData receiving_data;
+        ReceivingData receiving_data_bluetooth_ESP32;
 };
 
 #endif
