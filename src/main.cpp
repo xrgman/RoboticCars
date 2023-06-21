@@ -61,6 +61,8 @@ void disableEmergencyMode() {
 }
 
 void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8_t command[]) {
+    // comm.sendDebugMessage("Received smthng\n");
+
     switch (type)
     {
     case TEST: // Used for printing test information:
@@ -136,6 +138,8 @@ void state_changed_callback(Statemachine::State oldState, Statemachine::State ne
 
 void checkHardwareConnections() {
     comm.sendDebugMessage("\n***** Starting hardware connectivity check *****\r\n");
+
+    comm.checkDevicesOperation();
 
     //MPU9250:
     comm.sendDebugMessage("\n***** Checking sensor MPU9250 *****\r\n");

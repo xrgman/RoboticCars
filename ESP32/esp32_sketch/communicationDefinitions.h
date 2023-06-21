@@ -1,6 +1,8 @@
 #ifndef COMMUNICATIONDEFINITIONS_H
 #define COMMUNICATIONDEFINITIONS_H
 
+#include <functional>
+#include "stdlib.h"
 #include "stdint.h"
 
 #define COMM_BUF_SIZE 250
@@ -42,8 +44,11 @@ typedef struct
     uint8_t data_size;
     uint8_t data[COMM_BUF_SIZE];
     uint8_t idx;
+    uint8_t checksum;
 } ReceivingData;
 
-extern void processReceivedByte(ReceivingData *receiving_data, uint8_t r, void (*callback)(MessageType, RelayOver, uint8_t, uint8_t*));
+extern void processReceivedByte(ReceivingData *receiving_data, uint8_t r, std::function<void(MessageType, RelayOver, uint8_t, uint8_t*)>);
+extern void sendMessage(RelayOver sendByteOver, RelayOver relayOver, MessageType type, uint8_t size, uint8_t *data, std::function<void(RelayOver, uint8_t)>);
+
 
 #endif

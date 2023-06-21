@@ -1,6 +1,8 @@
 #include "communicationDefinitions.h"
 #include "BluetoothSerial.h"
 
+
+
 #define ESP32_BAUDRATE 115200
 #define ESP32_ONBOARD_LED_PIN 2
 #define ESP32_DEVICE_NAME "Robotic car - ESP32"
@@ -85,7 +87,7 @@ void loop() {
 //Serial stuff:
 
 
-void sendByte(RelayOver sendOver, byte b) {
+void sendByte(RelayOver sendOver, uint8_t b) {
   switch(sendOver) {
     case SERIAL_WIRE:
       Serial.print((char) b);
@@ -104,40 +106,12 @@ void sendByte(RelayOver sendOver, byte b) {
   }
 }
 
-void sendMessage(RelayOver sendOver, MessageType type, uint8_t size, uint8_t* data) {
-    uint8_t checkSum = 0;
-
-    //Sending start byte:
-    sendByte(sendOver, '?');
-    checkSum ^= '?';
-
-    //Sending relay over byte:
-    sendByte(sendOver, NONE);
-    checkSum ^= NONE;
-
-    //Sending message type:
-    sendByte(sendOver, type);
-    checkSum ^= type;
-
-    //Sending message size:
-    sendByte(sendOver, size);
-    checkSum ^= size;
-    
-    //Sending data:
-    for (int i = 0; i < size; i++) {
-        sendByte(sendOver, data[i]);
-        checkSum ^= data[i];
-    }
-
-  //TODO checksummetje
-}
-
 void processReceivedMessage(MessageType type, RelayOver relayOver, uint8_t data_size, uint8_t *data) {
     //Passing message if needed:
     //Serial.println("Received something :)");
 
     if(relayOver != NONE) { 
-      sendMessage(relayOver, type, data_size, data);
+      sendMessage(relayOver, NONE, type, data_size, data, &sendByte);
 
       return;
     }
@@ -147,6 +121,9 @@ void processReceivedMessage(MessageType type, RelayOver relayOver, uint8_t data_
           for(int i = 0; i < data_size; i++) {
             Serial.print((char) data[i]);
           }
+          break;
+        case PING:
+          sendMessage(SERIAL_WIRE_STM32, NONE, ACK, 0, NULL, &sendByte);
           break;
       }
     }
