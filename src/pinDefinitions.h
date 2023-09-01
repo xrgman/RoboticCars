@@ -24,6 +24,16 @@
 #define DRV8908_SLEEP_PIN PG_13 
 #define DRV8908_FAULT_PIN PG_12
 
+//***** Motor HALL sensor pins *****
+#define MOTOR_1_HALL_1 PF_3
+#define MOTOR_1_HALL_2 PF_4
+#define MOTOR_2_HALL_1 PF_8
+#define MOTOR_2_HALL_2 PF_9
+#define MOTOR_3_HALL_1 PF_11
+#define MOTOR_3_HALL_2 PF_12
+#define MOTOR_4_HALL_1 PB_0
+#define MOTOR_4_HALL_2 PB_1
+
 //***** AK8963 pins *****
 #define AK8963_SCL_PIN PF_1
 #define AK8963_SDA_PIN PF_0

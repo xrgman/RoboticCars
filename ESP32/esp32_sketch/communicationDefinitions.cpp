@@ -1,5 +1,7 @@
 #include "communicationDefinitions.h"
 
+//TODO error callback function for checksum :)
+
 /// @brief Receive and unpack the communication protocol, automatically called by interrupt.
 /// @param receiving_data Object that stores the receiving progress.
 /// @param r The received byte.
@@ -25,7 +27,7 @@ void processReceivedByte(ReceivingData *receiving_data, uint8_t r, std::function
     //Retreiving the data length:
     else if(receiving_data->status == MessageStatus::SIZE) {
         receiving_data->data_size = r; 
-        receiving_data->status = MessageStatus::DATA;
+        receiving_data->status = r == 0 ? MessageStatus::CHECKSUM : MessageStatus::DATA;
         receiving_data->checksum ^= r;
     }
     //Retreiving the data:
@@ -53,6 +55,25 @@ void processReceivedByte(ReceivingData *receiving_data, uint8_t r, std::function
         receiving_data->idx = 0;
         receiving_data->checksum = 0;
     }
+}
+
+bool ackReceived = false;
+
+bool sendMessage(RelayOver sendByteOver, RelayOver relayOver, MessageType type, uint8_t size, uint8_t *data, std::function<void(RelayOver, uint8_t)> sendByte, bool waitForAck, std::function<void(uint32_t)> delay) {
+    //Sending message:
+    sendMessage(sendByteOver, relayOver, type, size, data, sendByte);
+
+    //Wait till ack message is returned or time out
+    if(waitForAck) {
+        //TODO timeout
+        while(!ackReceived) {
+            delay(5);
+
+            
+        }
+    }
+
+    return true;
 }
 
 /// @brief Send a message using the defined protocol.

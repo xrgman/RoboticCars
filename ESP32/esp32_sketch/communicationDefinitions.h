@@ -26,6 +26,15 @@ typedef enum
     WIFI
 } RelayOver;
 
+typedef enum {
+    RST,
+    CONTROLS,
+    THROTTLE,
+    ANGLE,
+    PIVOT,
+    CONTROLLER
+} ControlCommandType;
+
  typedef enum
 {
     IDLE,    // State when not receiving a message
@@ -49,6 +58,7 @@ typedef struct
 
 extern void processReceivedByte(ReceivingData *receiving_data, uint8_t r, std::function<void(MessageType, RelayOver, uint8_t, uint8_t*)>);
 extern void sendMessage(RelayOver sendByteOver, RelayOver relayOver, MessageType type, uint8_t size, uint8_t *data, std::function<void(RelayOver, uint8_t)>);
+extern bool sendMessage(RelayOver sendByteOver, RelayOver relayOver, MessageType type, uint8_t size, uint8_t *data, std::function<void(RelayOver, uint8_t)>, bool, std::function<void(uint32_t)>);
 
 
 #endif

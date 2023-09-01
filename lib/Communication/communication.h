@@ -3,6 +3,7 @@
 
 #include "mbed.h"
 #include "serialcomm.h"
+#include "util.h"
 //TODO even beter place to store this :)
 #include "../ESP32/esp32_sketch/communicationDefinitions.h"
 
@@ -19,9 +20,11 @@ class Communication {
         void initialize(void (*processed_data_callaback)(MessageType, RelayOver, uint8_t, uint8_t*));
         void checkDevicesOperation();
         void setCommunicationState(CommunicationState newState);
+        void setCommunicationState(CommunicationState newState, bool printChange);
         void sendDebugMessage(const char *message);
         void send(MessageType type, uint8_t size, uint8_t* data);
         void send(MessageType type, uint8_t size, uint8_t* data, bool relayMessage);
+        bool send(MessageType type, uint8_t size, uint8_t* data, bool relayMessage, bool waitForAck);
 
     private:
         SerialComm serialCommunication;

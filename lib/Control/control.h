@@ -19,16 +19,8 @@ typedef struct {
     bool pivotRight;
 } Controls;
 
-typedef enum {
-    RST,
-    CONTROLS,
-    THROTTLE,
-    ANGLE,
-    PIVOT
-} ControlCommandType;
-
 void checkMotorOperation(Communication *comm);
-void initializeMotors();
+void initializeMotors(Communication *comm);
 
 void processMotors(Statemachine::State currentState);
 void processControlCommand(Communication* comm, uint8_t command[]);
@@ -38,6 +30,8 @@ void setMotorDirection(uint8_t motorId, Direction direction);
 void setMotorDirectionAll(Direction direction);
 uint8_t* getMotorSpeeds();
 Direction* getMotorDirections();
+
+//Attach interrupt to hall sensors? and just log that it happens, other thread can do the calculation 
 
 
 

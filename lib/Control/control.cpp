@@ -1,10 +1,31 @@
 #include "control.h"
 #include "controlconfiguration.h"
+#include "motor.h"
 #include "pinDefinitions.h"
 #include "Util.h"
 
 //DRV8908 motor chip:
 DRV8908 drv8908(DRV8908_MOSI_PIN, DRV8908_MISO_PIN, DRV8908_SCK_PIN, DRV8908_NSS_PIN, DRV8908_SLEEP_PIN, DRV8908_FAULT_PIN);
+
+//Timer used for RPM calculations:
+Timer timer;
+
+//Motors:
+Motor motor1(MOTOR_1_HALL_1, &timer);
+
+//Motor hall sensors:
+//InterruptIn motor1Hall1(MOTOR_1_HALL_1);
+//InterruptIn motor1Hall2(MOTOR_1_HALL_2);
+InterruptIn motor2Hall1(MOTOR_2_HALL_1);
+//InterruptIn motor2Hall2(MOTOR_2_HALL_2);
+InterruptIn motor3Hall1(MOTOR_3_HALL_1);
+//InterruptIn motor3Hall2(MOTOR_3_HALL_2);
+InterruptIn motor4Hall1(MOTOR_4_HALL_1);
+//InterruptIn motor4Hall2(MOTOR_4_HALL_2);
+
+//Storing current motor RPM's:
+float motorRPM[NR_OF_MOTORS];
+uint32_t lastPulseTime[NR_OF_MOTORS];
 
 //Used to store new motor values, written to motors by update_motors function:
 uint8_t motors[NR_OF_MOTORS];
@@ -15,9 +36,21 @@ Controls controls;
 
 ControlConfiguration configuration;
 
-void update_motors() {
-    // Check to see if its allowed to do :)
+//TODO: remove
+Communication *commu;
 
+int cnt = 0;
+
+void update_motors() {
+    cnt++;
+
+    if(cnt % 500000 == 0 && motors[0] != 0) {
+        char msg[45];
+        snprintf(msg, sizeof(msg), "motor 1 RPM: %f\n", motor1.getRPM());
+        commu->sendDebugMessage(msg);
+    }
+
+    
     // Checking if config needs to be rewritten:
     bool configChanged = false;
 
@@ -55,6 +88,16 @@ void motors_off() {
 
     update_motors();
 }
+
+//*****************************************
+//******** Motor Hall sensors *************
+//*****************************************
+
+void motor1HallISR() {
+    
+}
+
+
 
 //************************************************
 //******** Control functions *********************
@@ -121,7 +164,7 @@ void checkMotorOperation(Communication *comm) {
 }
 
 /// @brief Initialize motor control, by turning all four motors off:
-void initializeMotors() {
+void initializeMotors(Communication *comm) {
     //Initialize motor chip:
     drv8908.initialize();
 
@@ -133,6 +176,15 @@ void initializeMotors() {
 
     //Initializing motor direction to forward:
     motorDirection[0] = motorDirection[1] = motorDirection[2] = motorDirection[3] = FORWARD;
+
+    commu = comm;
+
+    //Initialize timer:
+    timer.start();
+
+    //Initialize hall sensors:
+    //motor1Hall1.rise(&motor1HallISR);
+    motor1.initialize();
 
     //Setting motors to idle state:
     motors_off();
@@ -252,6 +304,20 @@ void processMotors(Statemachine::State currentState) {
     update_motors();
 }
 
+void processController(Communication* comm, uint8_t controllerData[]) {
+    bool isSquarePressed = controllerData[1];
+    bool isCrossPressed = controllerData[2];
+    bool isCirclePressed = controllerData[3];
+    bool isTrianglePressed = controllerData[4];
+
+    int leftJoystickX = controllerData[5] << 24 | controllerData[6] << 16 |controllerData[7] << 8 |controllerData[8];
+    int leftJoystickY = controllerData[9] << 24 | controllerData[10] << 16 |controllerData[11] << 8 |controllerData[12];
+
+    //int mappedX = ((left))
+
+    //Control robot :)
+}
+
 void processControlCommand(Communication* comm, uint8_t command[]) {
     ControlCommandType type = (ControlCommandType) command[0];
     bool increase;
@@ -260,6 +326,10 @@ void processControlCommand(Communication* comm, uint8_t command[]) {
     switch(type) {
         case RST:
             configuration = EmptyConfiguration;
+            break;
+        case CONTROLLER:
+            processController(comm, command);
+
             break;
         case CONTROLS:
             Controls newControls;
@@ -293,3 +363,5 @@ void processControlCommand(Communication* comm, uint8_t command[]) {
             break;
         }
 }
+
+

@@ -2,9 +2,6 @@
 #include "pinDefinitions.h"
 #include "../ESP32/esp32_sketch/communicationDefinitions.cpp" //BAD but works for now :)
 
-
-static Callback<void(RelayOver, uint8_t)> sendByteCallback;
-
 /// @brief Constructor.
 /// @param communicationState Set the default communication method upon initialisation.
 Communication::Communication(CommunicationState communicationState) 
@@ -17,7 +14,6 @@ Communication::Communication(CommunicationState communicationState)
 /// @param processed_data_callaback Callback to be called after deciphering the received data.
 void Communication::initialize(void (*processed_data_callaback)(MessageType, RelayOver, uint8_t, uint8_t*)) {
     this->processed_data_callaback = processed_data_callaback;
-    sendByteCallback = callback(this, &Communication::sendByte);
 
     serialCommunication.initialize(callback(this, &Communication::receivedByteSerial));
     esp32BluetoothCommunication.initialize(callback(this, &Communication::receivedByteBluetoothESP32));
@@ -25,17 +21,32 @@ void Communication::initialize(void (*processed_data_callaback)(MessageType, Rel
 
 /// @brief Check whether all connected communication devices are working
 void Communication::checkDevicesOperation() {
+    CommunicationState backupCurrentState = currentCommState;
+
+    setCommunicationState(BLUETOOTH_ESP32, false);
+
+    //Ping esp32
+
+    setCommunicationState(backupCurrentState, false);
+
     //Checking serial connection to app:
-    send(PING, 0, NULL);
+    // bool res = send(PING, 0, NULL, true, true);
 
-    
+    // if(res) {
+    //     sendDebugMessage("SUCCESS: Connection to robot application established.\n");
+    // }
+    // else {
+    //     sendDebugMessage("ERROR: Connection to robot application not established.\n");
+    // }
+}
 
-    //Waiting for ack :/
+void Communication::setCommunicationState(CommunicationState newState) {
+    setCommunicationState(newState, true);
 }
 
 /// @brief Change the state of the communication protocol.
 /// @param newState The new way of communicating.
-void Communication::setCommunicationState(CommunicationState newState) {
+void Communication::setCommunicationState(CommunicationState newState, bool printChange) {
     //Check whether communicationmethod is implemented: 
     switch(newState) {
         case SERIAL:
@@ -49,12 +60,12 @@ void Communication::setCommunicationState(CommunicationState newState) {
             return;
     }
 
-
-
-    char msg[100];
-	snprintf(msg, sizeof(msg), "Changing communication state to: %s\n", stateToString(newState));
-    sendDebugMessage(msg);
-
+    if(printChange) {
+        char msg[100];
+	    snprintf(msg, sizeof(msg), "Changing communication state to: %s\n", stateToString(newState));
+        sendDebugMessage(msg);
+    }
+    
     currentCommState = newState;
 }
 
@@ -63,15 +74,10 @@ void Communication::setCommunicationState(CommunicationState newState) {
 /// @param size The size in bytes if the data. 
 /// @param data The data to be send. 
 void Communication::send(MessageType type, uint8_t size, uint8_t* data) {
-    send(type, size, data, true);
+    send(type, size, data, true, false);
 }
 
-//This is for testing the general function sendMessage :)
-void sendByteWrapper(RelayOver relayOver, uint8_t byte) {
-    printf("test\n");
 
-    sendByteCallback(relayOver, byte);
-}
 
 /// @brief Send data of the currently selected communication method, using the communication protocol.
 /// @param type The message type, used to decipher the message.
@@ -79,13 +85,25 @@ void sendByteWrapper(RelayOver relayOver, uint8_t byte) {
 /// @param data The data to be send. 
 /// @param relayMessage Whether the message should be relayed by the receiving device
 void Communication::send(MessageType type, uint8_t size, uint8_t* data, bool relayMessage) {
-    // Sending whether the message is for the ESP32 itself or if it should only relay it onto it's bluetooth line:
-    //Should be done for all devices capable of this, like a pi and the onboard chip.
+    send(type, size, data, relayMessage, false);
+}
+
+/// @brief 
+/// @param type 
+/// @param size 
+/// @param data 
+/// @param relayMessage 
+/// @param waitForAck 
+/// @return 
+bool Communication::send(MessageType type, uint8_t size, uint8_t* data, bool relayMessage, bool waitForAck) {
+     //Determing relay method:
     RelayOver relay = !relayMessage                         ? NONE
                       : currentCommState == BLUETOOTH_ESP32 ? BLUETOOTH
                                                             : NONE;
 
-    sendMessage(NONE, relay, type, size, data, [this](RelayOver r, uint8_t d) { return sendByte(r, d); });
+                                                                 
+    //Sending the message over the current communication protocol:
+    return sendMessage(NONE, relay, type, size, data, [this](RelayOver r, uint8_t d) { return sendByte(r, d); }, waitForAck, &Util::delay);
 }
 
 /// @brief Helper method to send basic string message.
@@ -100,8 +118,6 @@ void Communication::sendDebugMessage(const char* message) {
     //Sending message using conventionel method:
     send(DEBUG, message_size, data);
 }
-
-
 
 void Communication::sendByte(RelayOver relayOver, uint8_t byte) {
     switch(currentCommState) {
@@ -120,7 +136,7 @@ void Communication::sendByte(RelayOver relayOver, uint8_t byte) {
 void Communication::processed_data_callback_intermediate(MessageType type, RelayOver relayOver, uint8_t size, uint8_t * data) {
     //Filter ack messages :)
     if(type == ACK) {
-            sendDebugMessage("Hoi ack msg\n");
+        sendDebugMessage("Hoi ack msg\n");
     }
 
     //Passing on the callback:

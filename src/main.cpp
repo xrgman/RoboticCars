@@ -18,6 +18,8 @@
 
 #define WAIT_TIME_MS 100
 
+#define BANAAN
+
 //Function definitions:
 void state_changed_callback(Statemachine::State, Statemachine::State);
 
@@ -137,7 +139,7 @@ void state_changed_callback(Statemachine::State oldState, Statemachine::State ne
 
 
 void checkHardwareConnections() {
-    comm.sendDebugMessage("\n***** Starting hardware connectivity check *****\r\n");
+    comm.sendDebugMessage("\n***** Starting hardware connectivity check *****\r\n\n");
 
     comm.checkDevicesOperation();
 
@@ -168,8 +170,8 @@ int main()
     //Intializing serial connection:
     comm.initialize(command_callback);
 
-    //comm.setCommunicationState(Communication::SERIAL);
-    comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
+    comm.setCommunicationState(Communication::SERIAL);
+    //comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
 
     //Initializing MPU9250 chip:
     mpu9250.initialize(MPU9250::GFS_250DPS, MPU9250::AFS_2G);
@@ -181,7 +183,7 @@ int main()
     initializeTimers();
 
     //Initializing motor control:
-    initializeMotors();
+    initializeMotors(&comm);
 
     //Checking if all hardware is connected and functioning properly:
     checkHardwareConnections();

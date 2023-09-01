@@ -90,3 +90,9 @@ uint32_t Util::getBitsFromData(uint32_t data, uint8_t start, uint8_t end) {
 
     return data;
 }
+
+void Util::delay(uint32_t duration) {
+    printf("TESTDELAY\n");
+
+    thread_sleep_for(duration);
+}
