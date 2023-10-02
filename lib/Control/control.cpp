@@ -44,11 +44,11 @@ int cnt = 0;
 void update_motors() {
     cnt++;
 
-    if(cnt % 500000 == 0 && motors[0] != 0) {
-        char msg[45];
-        snprintf(msg, sizeof(msg), "motor 1 RPM: %f\n", motor1.getRPM());
-        commu->sendDebugMessage(msg);
-    }
+    // if(cnt % 500000 == 0 && motors[0] != 0) {
+    //     char msg[45];
+    //     snprintf(msg, sizeof(msg), "motor 1 RPM: %f\n", motor1.getRPM());
+    //     commu->sendDebugMessage(msg);
+    // }
 
     
     // Checking if config needs to be rewritten:

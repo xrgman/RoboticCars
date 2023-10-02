@@ -15,6 +15,7 @@
 #include "control.h"
 #include "timers.h"
 #include "leds.h"
+#include "respeaker6MicArray.h"
 
 #define WAIT_TIME_MS 100
 
@@ -48,6 +49,8 @@ AK8963 ak8963(AK8963_SCL_PIN, AK8963_SDA_PIN);
 HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, &comm);
 HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
 HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &comm);
+
+Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, &comm);
 
 void printFault() {
     printf("Printing out fault information:\n\n");
@@ -155,6 +158,10 @@ void checkHardwareConnections() {
     checkMotorOperation(&comm);
 }
 
+void test() {
+    comm.sendDebugMessage("Reached btn\n");
+}
+
 //NULL IS NC :)
 int main()
 {
@@ -188,6 +195,8 @@ int main()
     //Checking if all hardware is connected and functioning properly:
     checkHardwareConnections();
 
+    respeaker.setOnButtonClickListener(&test);
+
     while (true)
     {
         //Every 50ms:
@@ -202,6 +211,12 @@ int main()
                 //Blink blue status led:
                 if(leds.getCurrentEffect() == Leds::Effect::NONE) {
                     leds.toggleLed(BLUE);
+
+                   
+
+                    // char msg[45];
+                    // snprintf(msg, sizeof(msg), "Button: %d\n", st);
+                    // comm.sendDebugMessage(msg);
                 }
 
                 //comm.sendDebugMessage("Test\n");

@@ -53,6 +53,11 @@
 #define ESP32_GPIO1_PIN PC_14
 #define ESP32_GPIO2_PIN PC_15
 
+//***********************
+//***** Peripherals *****
+//***********************
 
+//***** Respeaker 6 Mic array *****
+#define RESPEAKER6MIC_BUTTON_PIN PD_7
 
 //***** *****
