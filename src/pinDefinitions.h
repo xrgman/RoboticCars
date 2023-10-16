@@ -59,5 +59,27 @@
 
 //***** Respeaker 6 Mic array *****
 #define RESPEAKER6MIC_BUTTON_PIN PD_7
+#define RESPEAKER6MIC_AC101_AMP_EN_PIN PD_4
+#define RESPEAKER6MIC_I2C_SDA PF_15
+#define RESPEAKER6MIC_I2C_SCL PF_14
+#define RESPEAKER6MIC_I2S_W PA_4 //Frame sync (FS, Grey)
+#define RESPEAKER6MIC_I2S_SD PB_2 //Serial data ( , Purple) (SPEAKER)
+#define RESPEAKER6MIC_I2S_CLK PC_10 //Serial clock (CLK, Brown) 
+#define RESPEAKER6MIC_I2S_SEL PC_11 //Channel select (DOUT, Green) (MIC)
+#define RESPEAKER6MIC_AC108_ADDRESS_1 0x35 << 1
+#define RESPEAKER6MIC_AC108_ADDRESS_2 0x3b << 1
+
+//I2S on board has 4 pins:
+// PCM FS - Framse Sync (WS)
+// PCM CLK - PDM clock line (SCK)
+// PCM DIN - Data in (probably from board to mics)
+// PCM DOUT - Data out (probably from mics to board)
+//I2S3 ports in cubemx
+
+
+//Video has:
+// WS - Word select (LRCLK)
+// SCK - Serial clock (BCLK)
+// SD - Serial data (DIN)
 
 //***** *****

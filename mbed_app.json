@@ -9,7 +9,8 @@
 	      "platform.default-serial-baud-rate": 9600 ,
         "target.stdio_uart_tx": "PA_9",
         "target.stdio_uart_rx": "PA_10",
-        "target.device_has_remove": ["LPTICKER"]
+        "target.device_has_remove": ["LPTICKER"],
+        "target.device_has_add": ["I2S"]
       }
     }
 }

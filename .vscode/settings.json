@@ -8,6 +8,8 @@
         "string_view": "cpp",
         "system_error": "cpp",
         "chrono": "cpp",
-        "cstddef": "cpp"
-    }
+        "cstddef": "cpp",
+        "*.tcc": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

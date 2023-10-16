@@ -188,7 +188,7 @@ void MPU9250::calibrate() {
     packet_count = fifo_count/12;// How many sets of full gyro and accelerometer data for averaging
 
     for (int i = 0; i < packet_count; i++) {
-        int16_t accelerometer_temp[3] = {0, 0, 0}, gyroscope_temp[3] = {0, 0, 0};
+        //int16_t accelerometer_temp[3] = {0, 0, 0}, gyroscope_temp[3] = {0, 0, 0};
 
         //Read data for averaging and sum 
         ReadBytes(MPU9250_FIFO_R_W, 12, &data[0]); 

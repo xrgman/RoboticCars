@@ -15,11 +15,15 @@
 #include "control.h"
 #include "timers.h"
 #include "leds.h"
+#include "util.h"
 #include "respeaker6MicArray.h"
+
 
 #define WAIT_TIME_MS 100
 
 #define BANAAN
+
+
 
 //Function definitions:
 void state_changed_callback(Statemachine::State, Statemachine::State);
@@ -50,7 +54,7 @@ HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, 
 HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
 HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &comm);
 
-Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, &comm);
+Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, RESPEAKER6MIC_I2C_SDA, RESPEAKER6MIC_I2C_SCL, &comm);
 
 void printFault() {
     printf("Printing out fault information:\n\n");
@@ -64,6 +68,12 @@ void printTest() {
 void disableEmergencyMode() {
     statemachine.changeState(Statemachine::State::IDLE);
 }
+
+// extern "C" {
+//     void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
+//         comm.sendDebugMessage("Reached end!\n");
+//     }
+// }
 
 void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8_t command[]) {
     // comm.sendDebugMessage("Received smthng\n");
@@ -154,8 +164,14 @@ void checkHardwareConnections() {
     comm.sendDebugMessage("\n***** Checking sensor AK8963 *****\r\n");
     ak8963.checkDeviceOperation(&comm);
 
+    //Respeaker:
+    comm.sendDebugMessage("\n***** Checking Respeaker 6 mic array *****\r\n");
+    respeaker.checkDeviceOperation(&comm);
+
     //Check operation of all hardware related to the motors:
     checkMotorOperation(&comm);
+
+    //Util::scanForI2CDevices(RESPEAKER6MIC_I2C_SDA, RESPEAKER6MIC_I2C_SCL);
 }
 
 void test() {
@@ -169,7 +185,6 @@ int main()
     char msg[45];
 	snprintf(msg, sizeof(msg), "Robotic car - Running Mbed OS version %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
     comm.sendDebugMessage(msg);
-
 
     Thread eventThread2;
     eventThread2.start(callback(&queue, &EventQueue::dispatch_forever));
@@ -190,11 +205,12 @@ int main()
     initializeTimers();
 
     //Initializing motor control:
-    initializeMotors(&comm);
+    //initializeMotors(&comm);
 
     //Checking if all hardware is connected and functioning properly:
-    checkHardwareConnections();
+    //checkHardwareConnections();
 
+    respeaker.initialize();
     respeaker.setOnButtonClickListener(&test);
 
     while (true)
@@ -225,11 +241,20 @@ int main()
             //Processing led effects:
             leds.processLedEffect(systemCounter);
 
+            
+
             //printf("TIMEEER\n");
             clearTimerFlag();
         }
 
+        //TEST: Respeaker
+        respeaker.loop();
+
         //TO-DO check if frequency is right: its too fast I guesss
-        processMotors(statemachine.getCurrentState());
+        //processMotors(statemachine.getCurrentState());
     }
+}
+
+void Error_Handler() {
+    printf("WOOPS\n");
 }
