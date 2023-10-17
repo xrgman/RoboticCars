@@ -1,5 +1,6 @@
 #include "communication.h"
 #include "pinDefinitions.h"
+#include "util.h"
 #include "../ESP32/esp32_sketch/communicationDefinitions.cpp" //BAD but works for now :)
 
 /// @brief Constructor.

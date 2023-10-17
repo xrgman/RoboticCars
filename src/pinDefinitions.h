@@ -66,6 +66,7 @@
 #define RESPEAKER6MIC_I2S_SD PB_2 //Serial data ( , Purple) (SPEAKER)
 #define RESPEAKER6MIC_I2S_CLK PC_10 //Serial clock (CLK, Brown) 
 #define RESPEAKER6MIC_I2S_SEL PC_11 //Channel select (DOUT, Green) (MIC)
+#define RESPEAKER6MIC_AC101_ADDRESS 0x1A << 1
 #define RESPEAKER6MIC_AC108_ADDRESS_1 0x35 << 1
 #define RESPEAKER6MIC_AC108_ADDRESS_2 0x3b << 1
 

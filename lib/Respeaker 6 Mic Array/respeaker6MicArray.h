@@ -25,9 +25,8 @@ class Respeaker6MicArray : IEDevice {
         InterruptIn button;
 
         I2S speaker;
-
-        //AC108 ac108_1, ac108_2;
         AC101 ac101;
+        AC108 ac108_1, ac108_2;
 
         Communication *communication;
 

@@ -2,17 +2,21 @@
 #include "ac101registers.h"
 #include "util.h"
 
-#define AC101_ADDR	0x1A << 1	// Device address
-
-AC101::AC101(PinName sda, PinName scl, PinName ampEnablePin) : i2c(sda, scl), enableAmp(ampEnablePin)
+AC101::AC101(PinName sda, PinName scl, uint8_t device_address, PinName ampEnablePin) : i2c(sda, scl), enableAmp(ampEnablePin)
 {
+	this->device_address = device_address;
 }
 
 void AC101::checkDeviceOperation(Communication *communication_protocol) {
     uint16_t response = readByte(0x00);
 
-    if(response == 0x101) { //257
+    if(response == 0x101 && initialized) { //257
         communication_protocol->sendDebugMessage("SUCCESS: AC101 found and functioning properly.\r\n");
+
+		return;
+    }
+	else if(response == 0x101 && !initialized) { //257
+        communication_protocol->sendDebugMessage("ERROR: AC101 found but not functioning properly.\r\n");
 
         return;
     }
@@ -67,6 +71,8 @@ bool AC101::initialize()
 
 	//Enabling amplifier:
 	enableAmp.write(1);
+
+	initialized = true;
 
 	return ok;
 }
@@ -209,9 +215,9 @@ uint16_t AC101::readByte(uint8_t address) {
     char data_write[1];
     data_write[0] = address;
 
-    i2c.write(AC101_ADDR, data_write, 1, true);
+    i2c.write(device_address, data_write, 1, true);
 
-    i2c.read(AC101_ADDR, data, 2, false);
+    i2c.read(device_address, data, 2, false);
 
     return Util::to_ui16(data);
 }
@@ -225,9 +231,9 @@ void AC101::readBytes(uint8_t address, uint8_t count, uint16_t *dest) {
     char data_write[1];
     data_write[0] = address;
 
-    i2c.write(AC101_ADDR, data_write, 1, 1); 
+    i2c.write(device_address, data_write, 1, 1); 
 
-    i2c.read(AC101_ADDR, data, count, 0); 
+    i2c.read(device_address, data, count, 0); 
 
     for(int i = 0; i < count; i+=2) {
         uint16_t ret = 0;
@@ -251,5 +257,5 @@ bool AC101::writeByte(uint8_t address, uint16_t data) {
     //Lower data byte:
     data_write[2] = data & 0xFF;
 
-    return i2c.write(AC101_ADDR, data_write, 3, false) == 0;
+    return i2c.write(device_address, data_write, 3, false) == 0;
 }

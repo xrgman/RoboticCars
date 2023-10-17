@@ -3,7 +3,6 @@
 
 #include "mbed.h"
 #include "serialcomm.h"
-#include "util.h"
 //TODO even beter place to store this :)
 #include "../ESP32/esp32_sketch/communicationDefinitions.h"
 

@@ -18,54 +18,54 @@
 #include "util.h"
 #include "respeaker6MicArray.h"
 
-
 #define WAIT_TIME_MS 100
 
 #define BANAAN
 
-
-
-//Function definitions:
+// Function definitions:
 void state_changed_callback(Statemachine::State, Statemachine::State);
 
-//Timeouts:
+// Timeouts:
 Timeout emergencyTimeout;
 
-//Queue to enable printf in ISR:
+// Queue to enable printf in ISR:
 EventQueue queue(32 * EVENTS_EVENT_SIZE);
 
-//The leds
+// The leds
 Leds leds;
 
-//Communication:
+// Communication:
 Communication comm(Communication::SERIAL);
 
-//Statemachine:
+// Statemachine:
 Statemachine statemachine(state_changed_callback, &comm);
 
-//MPU9250 IMU:
+// MPU9250 IMU:
 MPU9250 mpu9250(MPU9250_SCL_PIN, MPU9250_SDA_PIN, MPU9250_INT_PIN);
 
-//AK8963 magnetometer:
+// AK8963 magnetometer:
 AK8963 ak8963(AK8963_SCL_PIN, AK8963_SDA_PIN);
 
-//Ultrasonic sensors:
+// Ultrasonic sensors:
 HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, &comm);
 HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
 HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &comm);
 
 Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, RESPEAKER6MIC_I2C_SDA, RESPEAKER6MIC_I2C_SCL, &comm);
 
-void printFault() {
+void printFault()
+{
     printf("Printing out fault information:\n\n");
 }
 
-void printTest() {
+void printTest()
+{
     comm.sendDebugMessage("HOOI\n");
     // drv8908.Test();
 }
 
-void disableEmergencyMode() {
+void disableEmergencyMode()
+{
     statemachine.changeState(Statemachine::State::IDLE);
 }
 
@@ -75,7 +75,8 @@ void disableEmergencyMode() {
 //     }
 // }
 
-void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8_t command[]) {
+void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8_t command[])
+{
     // comm.sendDebugMessage("Received smthng\n");
 
     switch (type)
@@ -105,32 +106,35 @@ void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8
         statemachine.changeState(newState);
 
         break;
-        }
-        case CONTROL: {
-            processControlCommand(&comm, command);
-            break;
-        }
-        default:
-            break;
-        }
+    }
+    case CONTROL:
+    {
+        processControlCommand(&comm, command);
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 /// @brief Called when state is changed, can be used to execute certain actions based on the previous and new states.
 /// @param oldState State before the change.
 /// @param newState State after the change.
-void state_changed_callback(Statemachine::State oldState, Statemachine::State newState) {
-    //Emergency mode actions:
-    if(newState != Statemachine::State::EMERGENCY) {
+void state_changed_callback(Statemachine::State oldState, Statemachine::State newState)
+{
+    // Emergency mode actions:
+    if (newState != Statemachine::State::EMERGENCY)
+    {
         leds.disableLed(YELLOW);
     }
-    else {
-        //Disable Emergency mode automatically after 3 seconds:
-        if(emergencyTimeout.remaining_time().count() <= 0) {
+    else
+    {
+        // Disable Emergency mode automatically after 3 seconds:
+        if (emergencyTimeout.remaining_time().count() <= 0)
+        {
             emergencyTimeout.attach(&disableEmergencyMode, 3s);
         }
     }
-
-
 
     // if(newState == Statemachine::State::DRIVING_FORWARD) {
     //     setMotorDirectionAll(FORWARD);
@@ -141,120 +145,123 @@ void state_changed_callback(Statemachine::State oldState, Statemachine::State ne
     //     setMotorDirectionAll(REVERSE);
 
     //     //Always disable motors when state gets changed:
-        
+
     // }
 
-    //Printing state change:
+    // Printing state change:
     char msg[100];
-	snprintf(msg, sizeof(msg), "State changed successfully from state %s to state %s.\n", Statemachine::StateToString(oldState), Statemachine::StateToString(newState));
+    snprintf(msg, sizeof(msg), "State changed successfully from state %s to state %s.\n", Statemachine::StateToString(oldState), Statemachine::StateToString(newState));
     comm.sendDebugMessage(msg);
 }
 
-
-void checkHardwareConnections() {
+void checkHardwareConnections()
+{
     comm.sendDebugMessage("\n***** Starting hardware connectivity check *****\r\n\n");
 
     comm.checkDevicesOperation();
 
-    //MPU9250:
+    // MPU9250:
     comm.sendDebugMessage("\n***** Checking sensor MPU9250 *****\r\n");
     mpu9250.checkDeviceOperation(&comm);
 
-    //AK8963:
+    // AK8963:
     comm.sendDebugMessage("\n***** Checking sensor AK8963 *****\r\n");
     ak8963.checkDeviceOperation(&comm);
 
-    //Respeaker:
+    // Respeaker:
     comm.sendDebugMessage("\n***** Checking Respeaker 6 mic array *****\r\n");
     respeaker.checkDeviceOperation(&comm);
 
-    //Check operation of all hardware related to the motors:
+    // Check operation of all hardware related to the motors:
     checkMotorOperation(&comm);
 
-    //Util::scanForI2CDevices(RESPEAKER6MIC_I2C_SDA, RESPEAKER6MIC_I2C_SCL);
+    // Util::scanForI2CDevices(RESPEAKER6MIC_I2C_SDA, RESPEAKER6MIC_I2C_SCL);
 }
 
-void test() {
+void test()
+{
     comm.sendDebugMessage("Reached btn\n");
 }
 
-//NULL IS NC :)
+// NULL IS NC :)
 int main()
 {
-    //Printing welcome message:
+    // Printing welcome message:
     char msg[45];
-	snprintf(msg, sizeof(msg), "Robotic car - Running Mbed OS version %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
+    snprintf(msg, sizeof(msg), "Robotic car - Running Mbed OS version %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
     comm.sendDebugMessage(msg);
 
     Thread eventThread2;
     eventThread2.start(callback(&queue, &EventQueue::dispatch_forever));
 
-    //Intializing serial connection:
+    // Intializing serial connection:
     comm.initialize(command_callback);
 
     comm.setCommunicationState(Communication::SERIAL);
-    //comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
+    // comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
 
-    //Initializing MPU9250 chip:
+    // Initializing MPU9250 chip:
     mpu9250.initialize(MPU9250::GFS_250DPS, MPU9250::AFS_2G);
 
-    //Initializig AK8963:
+    // Initializig AK8963:
     ak8963.initialize(AK8963::MFS_16BITS, AK8963::MOP_CONINUES_2);
 
-    //Initializing timers:
+    // Initializing timers:
     initializeTimers();
 
-    //Initializing motor control:
-    //initializeMotors(&comm);
+    // Initializing motor control:
+    // initializeMotors(&comm);
 
-    //Checking if all hardware is connected and functioning properly:
-    //checkHardwareConnections();
-
+    // Initializing respeaker array:"
     respeaker.initialize();
     respeaker.setOnButtonClickListener(&test);
 
+    // Checking if all hardware is connected and functioning properly:
+    // checkHardwareConnections();
+
     while (true)
     {
-        //Every 50ms:
-        if(checkTimerFlag()) {
-            //Emergency mode yellow led blink:
-            if(statemachine.getCurrentState() == Statemachine::State::EMERGENCY && systemCounter % 2 == 0) {
+        // Every 50ms:
+        if (checkTimerFlag())
+        {
+            // Emergency mode yellow led blink:
+            if (statemachine.getCurrentState() == Statemachine::State::EMERGENCY && systemCounter % 2 == 0)
+            {
                 leds.toggleLed(YELLOW);
             }
 
-            //Every second:
-            if(systemCounter % 20 == 0) {
-                //Blink blue status led:
-                if(leds.getCurrentEffect() == Leds::Effect::NONE) {
+            // Every second:
+            if (systemCounter % 20 == 0)
+            {
+                // Blink blue status led:
+                if (leds.getCurrentEffect() == Leds::Effect::NONE)
+                {
                     leds.toggleLed(BLUE);
-
-                   
 
                     // char msg[45];
                     // snprintf(msg, sizeof(msg), "Button: %d\n", st);
                     // comm.sendDebugMessage(msg);
                 }
 
-                //comm.sendDebugMessage("Test\n");
+                // comm.sendDebugMessage("Test\n");
             }
 
-            //Processing led effects:
+            // Processing led effects:
             leds.processLedEffect(systemCounter);
 
-            
-
-            //printf("TIMEEER\n");
+            // printf("TIMEEER\n");
             clearTimerFlag();
         }
 
-        //TEST: Respeaker
+        // TEST: Respeaker
         respeaker.loop();
 
-        //TO-DO check if frequency is right: its too fast I guesss
-        //processMotors(statemachine.getCurrentState());
+        // TO-DO check if frequency is right: its too fast I guesss
+        // processMotors(statemachine.getCurrentState());
     }
 }
 
-void Error_Handler() {
+void Error_Handler()
+{
     printf("WOOPS\n");
 }

@@ -79,7 +79,7 @@ public:
 	} Mode_t;
 
 	// Constructor.
-	AC101(PinName sda, PinName scl, PinName ampEnablePin);
+	AC101(PinName sda, PinName scl, uint8_t device_address, PinName ampEnablePin);
 
 	// Check the operation and connection to the AC101 chip:
 	void checkDeviceOperation(Communication *communication_protocol);
@@ -145,7 +145,10 @@ public:
 protected:
 	I2C i2c;
 	DigitalOut enableAmp;
-	
+
+	uint8_t device_address;
+	bool initialized;
+
 	uint16_t readByte(uint8_t address);
 	void readBytes(uint8_t address, uint8_t count, uint16_t *dest);
 	bool writeByte(uint8_t address, uint16_t data);
