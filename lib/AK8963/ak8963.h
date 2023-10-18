@@ -30,7 +30,7 @@ class AK8963 : ISensor, IEDevice {
         };
 
         AK8963(PinName scl, PinName sda);
-        void checkDeviceOperation(Communication *communication_protocol);
+        bool checkDeviceOperation(Communication *communication_protocol);
         void printSensorReadings();
 
         void initialize(Mscale magnetometer_scale, Mmode magnetometer_mode);

@@ -53,6 +53,10 @@
 #define ESP32_GPIO1_PIN PC_14
 #define ESP32_GPIO2_PIN PC_15
 
+//***** I2C pins *****
+#define I2C_4_SDA PF_15
+#define I2C_4_SCL PF_14
+
 //***********************
 //***** Peripherals *****
 //***********************
@@ -60,8 +64,6 @@
 //***** Respeaker 6 Mic array *****
 #define RESPEAKER6MIC_BUTTON_PIN PD_7
 #define RESPEAKER6MIC_AC101_AMP_EN_PIN PD_4
-#define RESPEAKER6MIC_I2C_SDA PF_15
-#define RESPEAKER6MIC_I2C_SCL PF_14
 #define RESPEAKER6MIC_I2S_W PA_4 //Frame sync (FS, Grey)
 #define RESPEAKER6MIC_I2S_SD PB_2 //Serial data ( , Purple) (SPEAKER)
 #define RESPEAKER6MIC_I2S_CLK PC_10 //Serial clock (CLK, Brown) 

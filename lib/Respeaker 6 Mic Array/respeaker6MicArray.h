@@ -10,13 +10,12 @@
 
 class Respeaker6MicArray : IEDevice {
     public:
-        Respeaker6MicArray(PinName buttonPin, PinName sda, PinName scl, Communication *comm);
+        Respeaker6MicArray(PinName buttonPin, I2C *i2c, Communication *comm);
 
         void initialize();
 
-        void checkDeviceOperation(Communication *communication_protocol);
+        bool checkDeviceOperation(Communication *communication_protocol);
         void setOnButtonClickListener(void (*onButtonClick)());
-
 
         void loop();
 
@@ -24,7 +23,7 @@ class Respeaker6MicArray : IEDevice {
         void (*onButtonClick)();
         InterruptIn button;
 
-        I2S speaker;
+        I2S i2s;
         AC101 ac101;
         AC108 ac108_1, ac108_2;
 

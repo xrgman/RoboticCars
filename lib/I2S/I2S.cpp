@@ -11,7 +11,7 @@ int part = 0;
 const int maxNrOfElements = 65535;
 int nrOfParts = ceil(NUM_ELEMENTS / maxNrOfElements);
 
-uint8_t buffer[NUM_ELEMENTS];
+//uint8_t buffer[NUM_ELEMENTS];
 
 I2S::I2S(PinName sd, PinName ws, PinName clk, Communication *comm)
 {
@@ -41,13 +41,13 @@ void I2S::isr()
 
 void I2S::initialize()
 {
-  for (int i = 0; i < n_data; i++)
-  {
-    Wave_Data[i * 2] = (int16_t)(sin(2. * M_PI * 8. * i / 1000.) * 500);      // L-ch (x 500 is amplitude)
-    Wave_Data[i * 2 + 1] = (int16_t)(sin(2. * M_PI * 10. * i / 1000.) * 500); // R-ch
+  // for (int i = 0; i < n_data; i++)
+  // {
+  //   Wave_Data[i * 2] = (int16_t)(sin(2. * M_PI * 8. * i / 1000.) * 500);      // L-ch (x 500 is amplitude)
+  //   Wave_Data[i * 2 + 1] = (int16_t)(sin(2. * M_PI * 10. * i / 1000.) * 500); // R-ch
 
-    HAL_Delay(1);
-  }
+  //   HAL_Delay(1);
+  // }
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
@@ -96,15 +96,17 @@ void I2S::initialize()
 
   // HAL_I2S_Transmit_DMA(&hi2s3, (uint16_t*) Wave_Data, n_data * 2);
   //HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*)Wave_Data, (uint16_t)n_data * 2);
+  //write((uint16_t *)Wave_Data, (uint16_t)n_data * 2);
   // Storing elements in buffer:
-  for (int x = 0; x < NUM_ELEMENTS; x++)
-  {
-    buffer[x] = data[x] >> 1;
-  }
+  // for (int x = 0; x < NUM_ELEMENTS; x++)
+  // {
+  //   buffer[x] = data[x] >> 1;
+  // }
 }
 
 void I2S::loop()
 {
+  /*
   if (!playing)
   {
     playing = true;
@@ -117,9 +119,9 @@ void I2S::loop()
       return;
     }
 
-    char msg[100];
-    snprintf(msg, sizeof(msg), "Playing part %d.\n", part);
-    communication_protocol->sendDebugMessage(msg);
+    // char msg[100];
+    // snprintf(msg, sizeof(msg), "Playing part %d.\n", part);
+    // communication_protocol->sendDebugMessage(msg);
 
     int nrOfElements = (part + 1) * maxNrOfElements <= NUM_ELEMENTS ? maxNrOfElements : NUM_ELEMENTS - ((part)*maxNrOfElements);
 
@@ -129,19 +131,22 @@ void I2S::loop()
     }
 
     part++;
-  }
+  }*/
 }
 
 bool I2S::write(uint8_t *buff, uint16_t nrOfElements) {
   return HAL_SAI_Transmit_DMA(&hsai_BlockA1, buff, nrOfElements) == HAL_OK;
 }
 
+uint8_t convertedBuff[4412 * 2];
+
+//HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*)Wave_Data, (uint16_t)n_data * 2);
 bool I2S::write(uint16_t *buff, uint16_t nrOfElements) {
-  uint8_t convertedBuff[nrOfElements * 2];
+  printf("Writing 16 bit\n");
 
   for(int i = 0; i < nrOfElements; i++) {
-    convertedBuff[i * 2] = (uint8_t) (buff[i] && 0xFF);
-    convertedBuff[i * 2 + 1] = (uint8_t) ((buff[i] >> 8) & 0xFF);
+    convertedBuff[i * 2] = 128;//(uint8_t)(buff[i] && 0xFF);
+    convertedBuff[i * 2 + 1] = 155; //(uint8_t) (buff[i] >> 8);
   }
 
   return HAL_SAI_Transmit_DMA(&hsai_BlockA1, convertedBuff, nrOfElements * 2) == HAL_OK;

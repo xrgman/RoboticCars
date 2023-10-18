@@ -8,7 +8,7 @@ MPU9250::MPU9250(PinName scl, PinName sda, PinName interrupt)
     i2c.frequency(400000);
 }
 
-void MPU9250::checkDeviceOperation(Communication *communication_protocol) {
+bool MPU9250::checkDeviceOperation(Communication *communication_protocol) {
     uint8_t device_id = ReadByte(MPU9250_WHO_AM_I);
 
     printf("Device id: %x\n", device_id);
@@ -17,10 +17,12 @@ void MPU9250::checkDeviceOperation(Communication *communication_protocol) {
     if(device_id == 0x71 || device_id == 0x73) {
         communication_protocol->sendDebugMessage("SUCCESS: MPU9250 found and functioning properly.\r\n");
 
-        return;
+        return true;
     }
 
     communication_protocol->sendDebugMessage("ERROR: MPU9250 not found or not functioning properly.\r\n");
+
+    return false;
 }
 
 void MPU9250::printSensorReadings() {

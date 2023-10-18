@@ -1,12 +1,13 @@
 #include "ac108.h"
 #include "ac108registers.h"
 
-AC108::AC108(PinName sda, PinName scl, uint8_t device_address) : i2c(sda, scl)
+AC108::AC108(I2C *i2c, uint8_t device_address)
 {
+    this->i2c = i2c;
     this->device_address = device_address;
 }
 
-void AC108::checkDeviceOperation(Communication *communication_protocol)
+bool AC108::checkDeviceOperation(Communication *communication_protocol)
 {
     uint8_t response = readByte(0x00);
 
@@ -14,10 +15,12 @@ void AC108::checkDeviceOperation(Communication *communication_protocol)
     { // 74
         communication_protocol->sendDebugMessage("SUCCESS: AC108 found and functioning properly.\r\n");
 
-        return;
+        return true;
     }
 
     communication_protocol->sendDebugMessage("ERROR: AC108 not found or not functioning properly.\r\n");
+   
+    return false;
 }
 
 bool AC108::initialize()
@@ -111,9 +114,9 @@ char AC108::readByte(uint8_t address)
     char data_write[1];
     data_write[0] = address;
 
-    i2c.write(device_address, data_write, 1, true);
+    i2c->write(device_address, data_write, 1, true);
 
-    i2c.read(device_address, data, 1, false);
+    i2c->read(device_address, data, 1, false);
 
     return data[0];
 }
@@ -128,9 +131,9 @@ void AC108::readBytes(uint8_t address, uint8_t count, uint8_t *dest)
     char data_write[1];
     data_write[0] = address;
 
-    i2c.write(device_address, data_write, 1, 1);
+    i2c->write(device_address, data_write, 1, 1);
 
-    i2c.read(device_address, data, count, 0);
+    i2c->read(device_address, data, count, 0);
 
     for (int i = 0; i < count; i++)
     {
@@ -147,7 +150,7 @@ bool AC108::writeByte(uint8_t address, uint8_t data)
     data_write[0] = address;
     data_write[1] = data;
 
-    int t = i2c.write(device_address, data_write, 2, false);
+    int t = i2c->write(device_address, data_write, 2, false);
 
     return t == 0;
 }

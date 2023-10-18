@@ -42,7 +42,7 @@ class I2S {
         int bufflen = 1;
         //uint8_t buffer[1];
 
-        int16_t Wave_Data[n_data * 2];    // n_data is defined as 1000
+        //int16_t Wave_Data[n_data * 2];    // n_data is defined as 1000
         
 };
 

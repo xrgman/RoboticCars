@@ -22,6 +22,9 @@
 
 #define BANAAN
 
+//Definining I2C objects:
+I2C i2c_4(I2C_4_SDA, I2C_4_SCL);
+
 // Function definitions:
 void state_changed_callback(Statemachine::State, Statemachine::State);
 
@@ -51,7 +54,7 @@ HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, 
 HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
 HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &comm);
 
-Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, RESPEAKER6MIC_I2C_SDA, RESPEAKER6MIC_I2C_SCL, &comm);
+Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, &i2c_4, &comm);
 
 void printFault()
 {
@@ -200,6 +203,11 @@ int main()
     comm.setCommunicationState(Communication::SERIAL);
     // comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
 
+    //I2C settings:
+    i2c_4.stop();
+    HAL_Delay(100);
+    i2c_4.start();
+
     // Initializing MPU9250 chip:
     mpu9250.initialize(MPU9250::GFS_250DPS, MPU9250::AFS_2G);
 
@@ -217,7 +225,7 @@ int main()
     respeaker.setOnButtonClickListener(&test);
 
     // Checking if all hardware is connected and functioning properly:
-    // checkHardwareConnections();
+    checkHardwareConnections();
 
     while (true)
     {

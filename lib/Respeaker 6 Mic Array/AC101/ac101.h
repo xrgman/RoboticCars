@@ -79,10 +79,10 @@ public:
 	} Mode_t;
 
 	// Constructor.
-	AC101(PinName sda, PinName scl, uint8_t device_address, PinName ampEnablePin);
+	AC101(I2C *i2c, uint8_t device_address, PinName ampEnablePin);
 
 	// Check the operation and connection to the AC101 chip:
-	void checkDeviceOperation(Communication *communication_protocol);
+	bool checkDeviceOperation(Communication *communication_protocol);
 
 	// Initialize codec, using provided I2C pins and bus frequency.
 	// @return True on success, false on failure.
@@ -143,7 +143,7 @@ public:
 	void printRegisters();
 
 protected:
-	I2C i2c;
+	I2C *i2c;
 	DigitalOut enableAmp;
 
 	uint8_t device_address;

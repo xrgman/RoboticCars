@@ -40,7 +40,7 @@ class DRV8908 : IEDevice {
         void printRegisterContents();
         void printLocalConfigContent();
 
-        void checkDeviceOperation(Communication *communication_protocol);
+        bool checkDeviceOperation(Communication *communication_protocol);
         void printErrorStatus();
         void test();
 

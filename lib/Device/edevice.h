@@ -4,7 +4,7 @@
 #include "communication.h"
 
 class IEDevice {
-    virtual void checkDeviceOperation(Communication *communication_protocol) = 0;
+    virtual bool checkDeviceOperation(Communication *communication_protocol) = 0;
 };
 
 #endif

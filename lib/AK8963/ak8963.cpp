@@ -6,17 +6,19 @@ AK8963::AK8963(PinName scl, PinName sda) : i2c(sda, scl) {
 }
 
 /// @brief Check if the device is connected, by reading it's WHO_AM_I register.
-void AK8963::checkDeviceOperation(Communication *communication_protocol) {
+bool AK8963::checkDeviceOperation(Communication *communication_protocol) {
     uint8_t device_id = readByte(AK8963_WHO_AM_I);
 
     //Checking if sensor is found by using its WHO_AM_I register:
     if(device_id == 0x48) {
         communication_protocol->sendDebugMessage("SUCCESS: AK8963 found and functioning properly.\r\n");
 
-        return;
+        return true;
     }
 
     communication_protocol->sendDebugMessage("ERROR: AK8963 not found or not functioning properly.\r\n");
+
+    return false;
 }
 
 /// @brief Print all sensor data.

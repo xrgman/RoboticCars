@@ -37,7 +37,7 @@ class MPU9250 : ISensor, IEDevice {
         
 
         MPU9250(PinName scl, PinName sda, PinName interupt);
-        void checkDeviceOperation(Communication *communication_protocol);
+        bool checkDeviceOperation(Communication *communication_protocol);
         void printSensorReadings();
         void reset();
 

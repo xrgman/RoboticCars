@@ -84,7 +84,7 @@ void DRV8908::printLocalConfigContent() {
 }
 
 /// @brief Checks if the device id is 010 (DRV8908)
-void DRV8908::checkDeviceOperation(Communication *communication_protocol) {
+bool DRV8908::checkDeviceOperation(Communication *communication_protocol) {
     //Reading register containing device id:
     uint8_t data = readByte(CONFIG_CTRL) & 0xFF;
 
@@ -93,10 +93,13 @@ void DRV8908::checkDeviceOperation(Communication *communication_protocol) {
 
     if(deviceId == drv8908 || deviceId == drv8910) { //Apperently this chip identifies as a drv8910.....
         communication_protocol->sendDebugMessage("SUCCESS: DRV8908 found and functioning properly.\r\n");
-        return;
+        
+        return true;
     }
 
     communication_protocol->sendDebugMessage("ERROR: DRV8908 not found or not functioning properly.\r\n");
+
+    return false;
 }
 
 void DRV8908::printErrorStatus()
