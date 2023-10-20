@@ -18,13 +18,13 @@ public:
 		SAMPLE_RATE_44100 = 0x7000,
 		SAMPLE_RATE_48000 = 0x8000,
 		SAMPLE_RATE_96000 = 0x9000,
-		SAMPLE_RATE_192000 = 0xa000,
+		SAMPLE_RATE_192000 = 0xa000
 	} I2sSampleRate_t;
 
 	typedef enum
 	{
 		MODE_MASTER = 0x00,
-		MODE_SLAVE = 0x01,
+		MODE_SLAVE = 0x01
 	} I2sMode_t;
 
 	typedef enum
@@ -32,7 +32,7 @@ public:
 		WORD_SIZE_8_BITS = 0x00,
 		WORD_SIZE_16_BITS = 0x01,
 		WORD_SIZE_20_BITS = 0x02,
-		WORD_SIZE_24_BITS = 0x03,
+		WORD_SIZE_24_BITS = 0x03
 	} I2sWordSize_t;
 
 	typedef enum
@@ -40,7 +40,7 @@ public:
 		DATA_FORMAT_I2S = 0x00,
 		DATA_FORMAT_LEFT = 0x01,
 		DATA_FORMAT_RIGHT = 0x02,
-		DATA_FORMAT_DSP = 0x03,
+		DATA_FORMAT_DSP = 0x03
 	} I2sFormat_t;
 
 	typedef enum
@@ -58,7 +58,7 @@ public:
 		BCLK_DIV_64 = 0xa,
 		BCLK_DIV_96 = 0xb,
 		BCLK_DIV_128 = 0xc,
-		BCLK_DIV_192 = 0xd,
+		BCLK_DIV_192 = 0xd
 	} I2sBitClockDiv_t;
 
 	typedef enum
@@ -67,7 +67,7 @@ public:
 		LRCK_DIV_32 = 0x1,
 		LRCK_DIV_64 = 0x2,
 		LRCK_DIV_128 = 0x3,
-		LRCK_DIV_256 = 0x4,
+		LRCK_DIV_256 = 0x4
 	} I2sLrClockDiv_t;
 
 	typedef enum

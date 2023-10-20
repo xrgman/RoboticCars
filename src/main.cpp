@@ -5,10 +5,10 @@
 
 #include <string>
 #include "mbed.h"
+#include "main.h"
 #include "pinDefinitions.h"
 #include "statemachine.h"
 #include "sensor.h"
-#include "communication.h"
 #include "mpu9250.h"
 #include "ak8963.h"
 #include "hcsr04.h"
@@ -16,14 +16,12 @@
 #include "timers.h"
 #include "leds.h"
 #include "util.h"
-#include "respeaker6MicArray.h"
+#include "localizationControl.h"
+
 
 #define WAIT_TIME_MS 100
 
 #define BANAAN
-
-//Definining I2C objects:
-I2C i2c_4(I2C_4_SDA, I2C_4_SCL);
 
 // Function definitions:
 void state_changed_callback(Statemachine::State, Statemachine::State);
@@ -37,7 +35,10 @@ EventQueue queue(32 * EVENTS_EVENT_SIZE);
 // The leds
 Leds leds;
 
-// Communication:
+// I2C objects:
+I2C i2c_4(I2C_4_SDA, I2C_4_SCL);
+
+//Communication:
 Communication comm(Communication::SERIAL);
 
 // Statemachine:
@@ -54,7 +55,11 @@ HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, 
 HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
 HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &comm);
 
+// Respeaker: 
 Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, &i2c_4, &comm);
+
+// SD wrapper:
+SDWrapper sdWrapper(SPI_4_MOSI, SPI_4_MISO, SPI_4_CLK, SPI_4_NSS, &comm);
 
 void printFault()
 {
@@ -224,6 +229,12 @@ int main()
     respeaker.initialize();
     respeaker.setOnButtonClickListener(&test);
 
+    //Initialize SD card:
+    sdWrapper.initialize();
+
+    // Initializing localization control:
+    initializeLocalization();
+
     // Checking if all hardware is connected and functioning properly:
     checkHardwareConnections();
 
@@ -261,8 +272,14 @@ int main()
             clearTimerFlag();
         }
 
+        //Running sd card thread, used for playing music files etc:
+        sdWrapper.run();
+
         // TEST: Respeaker
-        respeaker.loop();
+        respeaker.run();
+
+        //Run localization control:
+        runLocalization();
 
         // TO-DO check if frequency is right: its too fast I guesss
         // processMotors(statemachine.getCurrentState());

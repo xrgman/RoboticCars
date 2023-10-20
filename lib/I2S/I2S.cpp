@@ -1,17 +1,10 @@
 #include "I2S.h"
-#include "get_lower.h"
-
-#define sample_freq 22025.0
 
 static uint32_t SAI1_client = 0;
 DMA_HandleTypeDef hdma_sai1_a;
 
-bool playing = false;
-int part = 0;
-const int maxNrOfElements = 65535;
-int nrOfParts = ceil(NUM_ELEMENTS / maxNrOfElements);
-
-//uint8_t buffer[NUM_ELEMENTS];
+uint8_t convertBuffer[I2S_BLOCK_SIZE];
+bool donePlaying = false;
 
 I2S::I2S(PinName sd, PinName ws, PinName clk, Communication *comm)
 {
@@ -21,33 +14,14 @@ I2S::I2S(PinName sd, PinName ws, PinName clk, Communication *comm)
 
   communication_protocol = comm;
 
-  // i2s_instance = this;
+  i2s_instance = this;
 }
 
-void I2S::isr()
+void I2S::initialize(uint32_t sampleRateOutput, uint8_t wordSizeOutput, uint8_t wordSizeInput)
 {
-  // buffer[0] = data[i]; //>> 1; // scale down volume a bit on amp
-  // HAL_SAI_Transmit_IT(&hsai_BlockA1, buffer, bufflen);
-  // i++;
-
-  // if (i >= NUM_ELEMENTS)
-  // {
-  //   i = 0;
-  //   sampletick.detach();
-
-  //   communication_protocol->sendDebugMessage("Done playing!\n");
-  // }
-}
-
-void I2S::initialize()
-{
-  // for (int i = 0; i < n_data; i++)
-  // {
-  //   Wave_Data[i * 2] = (int16_t)(sin(2. * M_PI * 8. * i / 1000.) * 500);      // L-ch (x 500 is amplitude)
-  //   Wave_Data[i * 2 + 1] = (int16_t)(sin(2. * M_PI * 10. * i / 1000.) * 500); // R-ch
-
-  //   HAL_Delay(1);
-  // }
+  this->sampleRateOutput = sampleRateOutput;
+  this->wordSizeInput = wordSizeInput;
+  this->wordSizeOutput = wordSizeOutput;
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
@@ -63,14 +37,14 @@ void I2S::initialize()
   hsai_BlockA1.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
   hsai_BlockA1.Init.NoDivider = SAI_MASTERDIVIDER_ENABLE;
   hsai_BlockA1.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_EMPTY;
-  hsai_BlockA1.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_22K;
+  hsai_BlockA1.Init.AudioFrequency = sampleRateOutput;
   hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
-  hsai_BlockA1.Init.MonoStereoMode = SAI_MONOMODE;
-  //hsai_BlockA1.Init.MonoStereoMode = SAI_STEREOMODE;
+  // hsai_BlockA1.Init.MonoStereoMode = SAI_MONOMODE;
+  hsai_BlockA1.Init.MonoStereoMode = SAI_STEREOMODE;
   hsai_BlockA1.Init.CompandingMode = SAI_NOCOMPANDING;
   hsai_BlockA1.Init.TriState = SAI_OUTPUT_NOTRELEASED;
 
-  if (HAL_SAI_InitProtocol(&hsai_BlockA1, SAI_I2S_STANDARD, SAI_PROTOCOL_DATASIZE_16BIT, 2) != HAL_OK)
+  if (HAL_SAI_InitProtocol(&hsai_BlockA1, SAI_I2S_STANDARD, wordSizeOutput, 2) != HAL_OK)
   {
     communication_protocol->sendDebugMessage("Failed to initialize SAI block A\n");
   }
@@ -85,76 +59,84 @@ void I2S::initialize()
   hsai_BlockB1.Init.CompandingMode = SAI_NOCOMPANDING;
   hsai_BlockB1.Init.TriState = SAI_OUTPUT_NOTRELEASED;
 
-  if (HAL_SAI_InitProtocol(&hsai_BlockB1, SAI_I2S_STANDARD, SAI_PROTOCOL_DATASIZE_16BIT, 2) != HAL_OK)
+  if (HAL_SAI_InitProtocol(&hsai_BlockB1, SAI_I2S_STANDARD, wordSizeInput, 2) != HAL_OK)
   {
     communication_protocol->sendDebugMessage("Failed to initialize SAI block B\n");
   }
 
-  // sampletick.attach(callback(this, &I2S::isr), 1.0 / sample_freq); // turn on timer interrupt
-
   communication_protocol->sendDebugMessage("Sucessfully initialized I2S protocol.\n");
-
-  // HAL_I2S_Transmit_DMA(&hi2s3, (uint16_t*) Wave_Data, n_data * 2);
-  //HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*)Wave_Data, (uint16_t)n_data * 2);
-  //write((uint16_t *)Wave_Data, (uint16_t)n_data * 2);
-  // Storing elements in buffer:
-  // for (int x = 0; x < NUM_ELEMENTS; x++)
-  // {
-  //   buffer[x] = data[x] >> 1;
-  // }
 }
 
-void I2S::loop()
+void I2S::setOnTxCpltCallback(Callback<void()> onTxCpltCallback)
 {
-  /*
-  if (!playing)
-  {
-    playing = true;
-
-    // Checking whether to stop:
-    if (part > nrOfParts)
-    {
-      communication_protocol->sendDebugMessage("Done playing all parts.\n");
-
-      return;
-    }
-
-    // char msg[100];
-    // snprintf(msg, sizeof(msg), "Playing part %d.\n", part);
-    // communication_protocol->sendDebugMessage(msg);
-
-    int nrOfElements = (part + 1) * maxNrOfElements <= NUM_ELEMENTS ? maxNrOfElements : NUM_ELEMENTS - ((part)*maxNrOfElements);
-
-    if (HAL_SAI_Transmit_DMA(&hsai_BlockA1, &buffer[part * nrOfElements], nrOfElements) != HAL_OK)
-    {
-      communication_protocol->sendDebugMessage("Error playing part.\n");
-    }
-
-    part++;
-  }*/
+  this->onTxCpltCallback = onTxCpltCallback;
 }
 
-bool I2S::write(uint8_t *buff, uint16_t nrOfElements) {
+bool I2S::write(uint8_t *buff, uint16_t nrOfElements)
+{
   return HAL_SAI_Transmit_DMA(&hsai_BlockA1, buff, nrOfElements) == HAL_OK;
 }
 
-uint8_t convertedBuff[4412 * 2];
-
-//HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*)Wave_Data, (uint16_t)n_data * 2);
-bool I2S::write(uint16_t *buff, uint16_t nrOfElements) {
-  printf("Writing 16 bit\n");
-
-  for(int i = 0; i < nrOfElements; i++) {
-    convertedBuff[i * 2] = 128;//(uint8_t)(buff[i] && 0xFF);
-    convertedBuff[i * 2 + 1] = 155; //(uint8_t) (buff[i] >> 8);
+bool I2S::write(uint16_t *buff, uint16_t nrOfElements)
+{
+  if(nrOfElements > I2S_BLOCK_SIZE) {
+    printf("Oeps!\n");
   }
 
-  return HAL_SAI_Transmit_DMA(&hsai_BlockA1, convertedBuff, nrOfElements * 2) == HAL_OK;
+  for (int i = 0; i < nrOfElements; i++)
+  {
+    convertBuffer[i * 2] = (uint8_t)(buff[i] && 0xFF);
+    convertBuffer[i * 2 + 1] = (uint8_t)(buff[i] >> 8) & 0xFF;
+  }
+
+  return HAL_SAI_Transmit_DMA(&hsai_BlockA1, convertBuffer, nrOfElements * 2) == HAL_OK;
 }
 
-bool I2S::write(uint32_t *buff, uint16_t nrOfElements) {
-  //return HAL_SAI_Transmit_DMA(&hsai_BlockA1, buff, nrOfElements) == HAL_OK;
+bool I2S::write(uint32_t *buff, uint16_t nrOfElements)
+{
+  // TODO
+  //  return HAL_SAI_Transmit_DMA(&hsai_BlockA1, buff, nrOfElements) == HAL_OK;
 }
+
+void I2S::run()
+{
+
+}
+
+//*********************************************************************************************
+//******** Get & set **************************************************************************
+//*********************************************************************************************
+
+/// @brief Get the current sample rate for master A.
+/// @return Sampling rate.
+uint32_t I2S::getSampleRateOutput()
+{
+  return this->sampleRateOutput;
+}
+
+/// @brief Get the current word size for slave B.
+/// @return Word size.
+uint8_t I2S::getWordSizeInput()
+{
+  return this->wordSizeInput;
+}
+
+/// @brief Get the current word size for master A.
+/// @return Word size.
+uint8_t I2S::getWordSizeOutput()
+{
+  return this->wordSizeOutput;
+}
+
+//*********************************************************************************************
+//******** Functions called from the callbacks ************************************************
+//*********************************************************************************************
+
+void I2S::printErrorMessage(const char *message)
+{
+  communication_protocol->sendDebugMessage(message);
+}
+
 //*********************************************************************************************
 //******** Functions called from within STM32F7 library, used to configure I2S & DMA **********
 //*********************************************************************************************
@@ -163,7 +145,11 @@ bool I2S::write(uint32_t *buff, uint16_t nrOfElements) {
 /// @param hi2s
 void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 {
-  playing = false;
+  // Calling callback if defined:
+  if (i2s_instance->onTxCpltCallback)
+  {
+    i2s_instance->onTxCpltCallback();
+  }
 }
 
 void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai)
@@ -175,17 +161,17 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai)
   if (hsai->Instance == SAI1_Block_A)
   {
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SAI1;
-    PeriphClkInitStruct.PLLSAI.PLLSAIN = 96;
-    PeriphClkInitStruct.PLLSAI.PLLSAIR = 2;
-    PeriphClkInitStruct.PLLSAI.PLLSAIQ = 3;
-    PeriphClkInitStruct.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2;
-    PeriphClkInitStruct.PLLSAIDivQ = 1;
-    PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_2;
+    PeriphClkInitStruct.PLLSAI.PLLSAIN = 96; //N value 
+    PeriphClkInitStruct.PLLSAI.PLLSAIR = 2; //Second column /R
+    PeriphClkInitStruct.PLLSAI.PLLSAIQ = 4; //Second column /Q (3)
+    PeriphClkInitStruct.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2; //Second column /P
+    PeriphClkInitStruct.PLLSAIDivQ = 1; //Thrith column /Q (1)
+    PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_2; //Thirth column /R
     PeriphClkInitStruct.Sai1ClockSelection = RCC_SAI1CLKSOURCE_PLLSAI;
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
-      // TODO
+      i2s_instance->printErrorMessage("Failed to initialize SAI clocks.\n");
     }
 
     /* Peripheral clock enable */
@@ -226,7 +212,7 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai)
 
     if (HAL_DMA_Init(&hdma_sai1_a) != HAL_OK)
     {
-      // TODO
+      i2s_instance->printErrorMessage("Failed to initialize DMA.\n");
     }
 
     /* Several peripheral DMA handle pointers point to the same DMA handle.

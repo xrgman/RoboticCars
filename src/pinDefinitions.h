@@ -57,6 +57,12 @@
 #define I2C_4_SDA PF_15
 #define I2C_4_SCL PF_14
 
+//***** SPI pins *****
+#define SPI_4_NSS PE_8
+#define SPI_4_CLK PE_2
+#define SPI_4_MISO PE_13
+#define SPI_4_MOSI PE_14
+
 //***********************
 //***** Peripherals *****
 //***********************

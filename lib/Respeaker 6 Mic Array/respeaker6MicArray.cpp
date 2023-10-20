@@ -23,14 +23,13 @@ bool Respeaker6MicArray::checkDeviceOperation(Communication *communication_proto
     ok &= ac108_1.checkDeviceOperation(communication_protocol);
     ok &= ac108_2.checkDeviceOperation(communication_protocol);
 
-    //Playing beep:
-    ac101.setVolumeSpeaker(40);
-    ac101.setI2sSampleRate(AC101::SAMPLE_RATE_44100);
-    ac101.setI2sWordSize(AC101::WORD_SIZE_16_BITS);
+    // Playing beep:
+    setVolumeSpeaker(40);
+    configureSpeaker(SAMPLE_RATE_44100, WORD_SIZE_16_BITS);
 
     i2s.write(data_beep, nrElementsBeep);
 
-    return ok; 
+    return ok;
 }
 
 void Respeaker6MicArray::initialize()
@@ -45,11 +44,12 @@ void Respeaker6MicArray::initialize()
 
     // Initializing AC108 chips:
     // When I initialize both, I2S stops working (ISR not getting called anymore) -> Reset required
-    //  if(!ac108_1.initialize()) {
-    //      communication->sendDebugMessage("Failed to start AC108 - 1\n");
+    if (!ac108_1.initialize())
+    {
+        communication->sendDebugMessage("Failed to start AC108 - 1\n");
 
-    //     //return;
-    // }
+        return;
+    }
 
     // if(!ac108_2.initialize()) {
     //     communication->sendDebugMessage("Failed to start AC108 - 2\n");
@@ -57,14 +57,9 @@ void Respeaker6MicArray::initialize()
     //     //return;
     // }
 
-    
-
-    // Setting sample rate for sample:
-    // ac101.setI2sSampleRate(AC101::SAMPLE_RATE_22050);
-    // ac101.setI2sWordSize(AC101::WORD_SIZE_16_BITS);
-
-    // Initialize i2s:
-    i2s.initialize();
+    // Initialize i2s for 44Khz and 16 bits:
+    i2s.initialize(SAI_AUDIO_FREQUENCY_44K, SAI_PROTOCOL_DATASIZE_16BIT, SAI_PROTOCOL_DATASIZE_16BIT);
+    i2s.setOnTxCpltCallback(callback(this, &Respeaker6MicArray::onI2STxCpltCallback));
 }
 
 /// @brief Set the callback function for when the button on the Respeaker board is clicked.
@@ -73,6 +68,148 @@ void Respeaker6MicArray::setOnButtonClickListener(void (*onButtonClick)())
 {
     this->onButtonClick = onButtonClick;
 }
+
+void Respeaker6MicArray::setOnI2SWriteDoneListener(Callback<void()> onI2SWriteDone)
+{
+    this->onI2SWriteDone = onI2SWriteDone;
+}
+
+/// @brief Set the volume (0..63) of the speaker on the Respeaker array.
+/// @param volume The new volume value.
+/// @return Whether setting the volume succeeded.
+bool Respeaker6MicArray::setVolumeSpeaker(uint8_t volume)
+{
+    if (volume < 0 || volume > 63)
+    {
+        return false;
+    }
+
+    return ac101.setVolumeSpeaker(volume);
+}
+
+// TODO:
+bool Respeaker6MicArray::setVolumeMicrophones(uint8_t volume)
+{
+    return false;
+}
+
+/// @brief Configure respeaker speaker to the given sample rate and word size, depending on data.
+/// @param sampleRate Sample rate of the data that needs to be outputted.
+/// @param wordSize  Word size of the data to be outputted
+/// @return Whether or not it was a success.
+bool Respeaker6MicArray::configureSpeaker(SampleRate sampleRate, WordSize wordSize)
+{
+    bool ok = true;
+
+    // Setting word size:
+    AC101::I2sWordSize_t wordSizeAC101 = AC101::WORD_SIZE_8_BITS;
+    uint8_t wordSizeI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+
+    switch (wordSize)
+    {
+    case WORD_SIZE_8_BITS:
+        wordSizeAC101 = AC101::WORD_SIZE_8_BITS;
+        wordSizeI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+        break;
+    case WORD_SIZE_16_BITS:
+        wordSizeAC101 = AC101::WORD_SIZE_16_BITS;
+        wordSizeI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+        break;
+    case WORD_SIZE_20_BITS:
+        wordSizeAC101 = AC101::WORD_SIZE_20_BITS;
+        wordSizeI2S = SAI_PROTOCOL_DATASIZE_24BIT;
+        break;
+    case WORD_SIZE_24_BITS:
+        wordSizeAC101 = AC101::WORD_SIZE_24_BITS;
+        wordSizeI2S = SAI_PROTOCOL_DATASIZE_24BIT;
+        break;
+    }
+
+    ok &= ac101.setI2sWordSize(wordSizeAC101);
+
+    // Setting sample rate:
+    AC101::I2sSampleRate_t sampleRateAC101 = AC101::SAMPLE_RATE_8000;
+    uint32_t sampleRateI2S = SAI_AUDIO_FREQUENCY_8K;
+
+    switch (sampleRate)
+    {
+    case SAMPLE_RATE_8000:
+        sampleRateAC101 = AC101::SAMPLE_RATE_8000;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_8K;
+        break;
+    case SAMPLE_RATE_11052:
+        sampleRateAC101 = AC101::SAMPLE_RATE_11052;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_11K;
+        break;
+    case SAMPLE_RATE_16000:
+        sampleRateAC101 = AC101::SAMPLE_RATE_16000;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_16K;
+        break;
+    case SAMPLE_RATE_22050:
+        sampleRateAC101 = AC101::SAMPLE_RATE_22050;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_22K;
+        break;
+    case SAMPLE_RATE_32000:
+        sampleRateAC101 = AC101::SAMPLE_RATE_32000;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_32K;
+        break;
+    case SAMPLE_RATE_44100:
+        sampleRateAC101 = AC101::SAMPLE_RATE_44100;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_44K;
+        break;
+    case SAMPLE_RATE_48000:
+        sampleRateAC101 = AC101::SAMPLE_RATE_48000;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_48K;
+        break;
+    case SAMPLE_RATE_96000:
+        sampleRateAC101 = AC101::SAMPLE_RATE_96000;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_96K;
+        break;
+    case SAMPLE_RATE_192000:
+        sampleRateAC101 = AC101::SAMPLE_RATE_192000;
+        sampleRateI2S = SAI_AUDIO_FREQUENCY_192K;
+        break;
+    }
+
+    ok &= ac101.setI2sSampleRate(sampleRateAC101);
+    // ok &= ac101.setI2sSampleRate(AC101::SAMPLE_RATE_44100);
+
+    i2s.initialize(sampleRateI2S, wordSizeI2S, i2s.getWordSizeInput());
+
+    return ok;
+}
+
+//**************************************
+//******** Write functions *************
+//**************************************
+
+/// @brief Write 8 bit data to the speaker module.
+/// @param data Data to write.
+/// @param size Size of the data array.
+void Respeaker6MicArray::writeSpeaker8(uint8_t *data, uint16_t size)
+{
+    i2s.write(data, size);
+}
+
+/// @brief Write 16 bit data to the speaker module.
+/// @param data Data to write.
+/// @param size Size of the data array.
+void Respeaker6MicArray::writeSpeaker16(uint16_t *data, uint16_t size)
+{
+    i2s.write(data, size);
+}
+
+/// @brief Write 32 bit data to the speaker module.
+/// @param data Data to write.
+/// @param size Size of the data array.
+void Respeaker6MicArray::writeSpeaker32(uint32_t *data, uint16_t size)
+{
+    i2s.write(data, size);
+}
+
+//**************************************
+//******** Callbacks *******************
+//**************************************
 
 /// @brief Private method triggered on rising edge (release) of the button.
 void Respeaker6MicArray::onButtonInterruptRise()
@@ -85,7 +222,15 @@ void Respeaker6MicArray::onButtonInterruptRise()
     debounceTimer.reset();
 }
 
-void Respeaker6MicArray::loop()
+void Respeaker6MicArray::onI2STxCpltCallback()
 {
-    // i2s.loop();
+    if (onI2SWriteDone)
+    {
+        onI2SWriteDone();
+    }
+}
+
+void Respeaker6MicArray::run()
+{
+    i2s.run();
 }
