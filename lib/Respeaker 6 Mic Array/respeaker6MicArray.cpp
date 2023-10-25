@@ -2,6 +2,8 @@
 #include "pinDefinitions.h"
 #include "beep.h"
 
+uint8_t buff[1024];
+
 Respeaker6MicArray::Respeaker6MicArray(PinName buttonPin, I2C *i2c, Communication *comm)
     : button(buttonPin),
       ac101(i2c, RESPEAKER6MIC_AC101_ADDRESS, RESPEAKER6MIC_AC101_AMP_EN_PIN),
@@ -44,22 +46,29 @@ void Respeaker6MicArray::initialize()
 
     // Initializing AC108 chips:
     // When I initialize both, I2S stops working (ISR not getting called anymore) -> Reset required
-    if (!ac108_1.initialize())
-    {
-        communication->sendDebugMessage("Failed to start AC108 - 1\n");
+    // if (!ac108_1.initialize())
+    // {
+    //     communication->sendDebugMessage("Failed to start AC108 - 1\n");
 
-        return;
-    }
+    //     return;
+    // }
 
     // if(!ac108_2.initialize()) {
     //     communication->sendDebugMessage("Failed to start AC108 - 2\n");
 
-    //     //return;
+    //     return;
     // }
+
+    // ac108_2.startCapture44();
+
+    // ThisThread::sleep_for(10s);
+
+    // ac108_2.stopCapture();
 
     // Initialize i2s for 44Khz and 16 bits:
     i2s.initialize(SAI_AUDIO_FREQUENCY_44K, SAI_PROTOCOL_DATASIZE_16BIT, SAI_PROTOCOL_DATASIZE_16BIT);
     i2s.setOnTxCpltCallback(callback(this, &Respeaker6MicArray::onI2STxCpltCallback));
+    i2s.setOnRxCpltCallback(callback(this, &Respeaker6MicArray::onI2SRxCpltCallback));
 }
 
 /// @brief Set the callback function for when the button on the Respeaker board is clicked.
@@ -74,12 +83,17 @@ void Respeaker6MicArray::setOnI2SWriteDoneListener(Callback<void()> onI2SWriteDo
     this->onI2SWriteDone = onI2SWriteDone;
 }
 
+void Respeaker6MicArray::setOnI2SReadDoneListener(Callback<void()> onI2SReadDone)
+{
+    this->onI2SReadDone = onI2SReadDone;
+}
+
 /// @brief Set the volume (0..63) of the speaker on the Respeaker array.
 /// @param volume The new volume value.
 /// @return Whether setting the volume succeeded.
 bool Respeaker6MicArray::setVolumeSpeaker(uint8_t volume)
 {
-    if (volume < 0 || volume > 63)
+    if (volume > 63)
     {
         return false;
     }
@@ -90,7 +104,12 @@ bool Respeaker6MicArray::setVolumeSpeaker(uint8_t volume)
 // TODO:
 bool Respeaker6MicArray::setVolumeMicrophones(uint8_t volume)
 {
-    return false;
+    bool ok = true;
+
+    ok &= ac108_1.setVolume(volume);
+    ok &= ac108_2.setVolume(volume);
+
+    return ok;
 }
 
 /// @brief Configure respeaker speaker to the given sample rate and word size, depending on data.
@@ -208,6 +227,34 @@ void Respeaker6MicArray::writeSpeaker32(uint32_t *data, uint16_t size)
 }
 
 //**************************************
+//******** Read functions *************
+//**************************************
+
+/// @brief Read 8 bit data to the speaker module.
+/// @param data Array to read data into.
+/// @param size Size of the data array.
+void Respeaker6MicArray::readMicrophones8(uint8_t *data, uint16_t size)
+{
+    i2s.read(data, size);
+}
+
+/// @brief Read 16 bit data to the speaker module.
+/// @param data Array to read data into.
+/// @param size Size of the data array.
+void Respeaker6MicArray::readMicrophones16(uint16_t *data, uint16_t size)
+{
+    i2s.read(data, size);
+}
+
+/// @brief Read 32 bit data to the speaker module.
+/// @param data Array to read data into.
+/// @param size Size of the data array.
+void Respeaker6MicArray::readMicrophones32(uint32_t *data, uint16_t size)
+{
+    i2s.read(data, size);
+}
+
+//**************************************
 //******** Callbacks *******************
 //**************************************
 
@@ -230,7 +277,24 @@ void Respeaker6MicArray::onI2STxCpltCallback()
     }
 }
 
+void Respeaker6MicArray::onI2SRxCpltCallback()
+{
+    if (onI2SReadDone)
+    {
+        onI2SReadDone();
+    }
+
+    // char msg[100];
+    // snprintf(msg, sizeof(msg), "Data: %d, %d, %d, %d.\n", buff[0], buff[64], buff[256], buff[512]);
+    // communication->sendDebugMessage(msg);)
+}
+
 void Respeaker6MicArray::run()
 {
     i2s.run();
+}
+
+void Respeaker6MicArray::test() {
+    i2s.write(buff, 1024);
+    // i2s.read(buff, 1024);
 }

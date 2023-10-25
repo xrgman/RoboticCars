@@ -45,13 +45,12 @@ void Util::printAsBinary(int number) {
     printf("\r\n");
 }
 
-void Util::scanForI2CDevices(PinName sda, PinName scl) {
+void Util::scanForI2CDevices(I2C *i2c) {
     int ack;   
     int address;
-    I2C i2c(sda, scl);
 
     for(address=1;address<127;address++) {    
-        ack = i2c.write(address << 1, NULL, 0);
+        ack = i2c->write(address << 1, NULL, 0);
 
         if (ack == 0) {
             // char msg[55];

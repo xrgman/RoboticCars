@@ -19,6 +19,7 @@ public:
     bool checkDeviceOperation(Communication *communication_protocol);
     void setOnButtonClickListener(void (*onButtonClick)());
     void setOnI2SWriteDoneListener(Callback<void()> onI2SWriteDone);
+    void setOnI2SReadDoneListener(Callback<void()> onI2SReadDone);
 
     bool setVolumeSpeaker(uint8_t volume);
     bool setVolumeMicrophones(uint8_t volume);
@@ -29,11 +30,17 @@ public:
     void writeSpeaker16(uint16_t *data, uint16_t size);
     void writeSpeaker32(uint32_t *data, uint16_t size);
 
+    void readMicrophones8(uint8_t *data, uint16_t size);
+    void readMicrophones16(uint16_t *data, uint16_t size);
+    void readMicrophones32(uint32_t *data, uint16_t size);
+
     void run();
+    void test();
 
 private:
     void (*onButtonClick)();
     Callback<void()> onI2SWriteDone;
+    Callback<void()> onI2SReadDone;
     InterruptIn button;
 
     I2S i2s;
@@ -44,6 +51,7 @@ private:
 
     void onButtonInterruptRise();
     void onI2STxCpltCallback();
+    void onI2SRxCpltCallback();
 
     //Fields used for playback of larger files:
 

@@ -16,6 +16,8 @@ class AC108 : IEDevice {
         bool initialize();
         bool captureStarted();
         bool setVolume(uint8_t vol);
+        bool startCapture44();
+        bool stopCapture();
 
     private:
         I2C *i2c;

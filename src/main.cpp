@@ -183,7 +183,7 @@ void checkHardwareConnections()
     // Check operation of all hardware related to the motors:
     checkMotorOperation(&comm);
 
-    // Util::scanForI2CDevices(RESPEAKER6MIC_I2C_SDA, RESPEAKER6MIC_I2C_SCL);
+    //Util::scanForI2CDevices(&i2c_4);
 }
 
 void test()
@@ -207,6 +207,10 @@ int main()
 
     comm.setCommunicationState(Communication::SERIAL);
     // comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
+
+    //Disable D-cache:
+    // SCB_DisableDCache();
+    // SCB_CleanInvalidateDCache();
 
     //I2C settings:
     i2c_4.stop();
@@ -236,7 +240,7 @@ int main()
     initializeLocalization();
 
     // Checking if all hardware is connected and functioning properly:
-    checkHardwareConnections();
+    //checkHardwareConnections();
 
     while (true)
     {
@@ -283,6 +287,7 @@ int main()
 
         // TO-DO check if frequency is right: its too fast I guesss
         // processMotors(statemachine.getCurrentState());
+        HAL_Delay(10); //TODO remove :)
     }
 }
 

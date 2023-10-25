@@ -17,7 +17,7 @@
 
 //Chip Reset
 #define CHIP_RST			0x00
-#define CHIP_RST_VAL		0x12
+#define CHIP_RST_VAL		0x4A//0x12
 
 //Power Control
 #define PWR_CTRL1			0x01

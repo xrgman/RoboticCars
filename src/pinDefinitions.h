@@ -68,8 +68,8 @@
 //***********************
 
 //***** Respeaker 6 Mic array *****
-#define RESPEAKER6MIC_BUTTON_PIN PD_7
-#define RESPEAKER6MIC_AC101_AMP_EN_PIN PD_4
+#define RESPEAKER6MIC_BUTTON_PIN PA_4//PD_7
+#define RESPEAKER6MIC_AC101_AMP_EN_PIN PB_2//PD_4
 #define RESPEAKER6MIC_I2S_W PA_4 //Frame sync (FS, Grey)
 #define RESPEAKER6MIC_I2S_SD PB_2 //Serial data ( , Purple) (SPEAKER)
 #define RESPEAKER6MIC_I2S_CLK PC_10 //Serial clock (CLK, Brown) 

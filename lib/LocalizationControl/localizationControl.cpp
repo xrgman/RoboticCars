@@ -6,13 +6,21 @@
 
 void onI2SWriteDone()
 {
-    sdWrapper.signalBatchDone();
+    sdWrapper.signalWriteDone();
+}
+
+void onI2SReadDone()
+{
+    sdWrapper.signalReadDone();
 }
 
 void configure(SampleRate sampleRate, WordSize wordSize, uint8_t channels)
 {
-    respeaker.configureSpeaker(sampleRate, wordSize); //TODO channels
+    bool t = respeaker.configureSpeaker(sampleRate, wordSize); //TODO channels
 
+    if(!t) {
+        printf("Failed to configure!");
+    }
 
     //SErial clock (Mhz) should be: samplerate (Hz) * wordsize * channels
     //In our case:  22050*16*1  = 352.8 kHz
@@ -24,10 +32,19 @@ void configure(SampleRate sampleRate, WordSize wordSize, uint8_t channels)
 void initializeLocalization()
 {
     respeaker.setOnI2SWriteDoneListener(&onI2SWriteDone);
+    respeaker.setOnI2SReadDoneListener(&onI2SReadDone);
 
     respeaker.setVolumeSpeaker(45);
+    
 
-    //sdWrapper.playWavFile("/sd/test2.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
+    //sdWrapper.recordToWavFile("sd/record.wav", 5, callback(&respeaker, &Respeaker6MicArray::readMicrophones8));
+
+    //respeaker.test();
+
+    sdWrapper.playWavFile("/sd/test3.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
+// respeaker.test();
+    //HAL_Delay(1000);
+    //respeaker.test();
 }
 
 void runLocalization()
