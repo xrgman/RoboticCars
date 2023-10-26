@@ -30,9 +30,7 @@ public:
     void writeSpeaker16(uint16_t *data, uint16_t size);
     void writeSpeaker32(uint32_t *data, uint16_t size);
 
-    void readMicrophones8(uint8_t *data, uint16_t size);
-    void readMicrophones16(uint16_t *data, uint16_t size);
-    void readMicrophones32(uint32_t *data, uint16_t size);
+    uint32_t *getPointerToReadBuffer();
 
     void run();
     void test();

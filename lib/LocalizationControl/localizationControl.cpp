@@ -19,7 +19,10 @@ void configure(SampleRate sampleRate, WordSize wordSize, uint8_t channels)
     bool t = respeaker.configureSpeaker(sampleRate, wordSize); //TODO channels
 
     if(!t) {
-        printf("Failed to configure!");
+        printf("Failed to configure!\n");
+    }
+    else {
+        printf("BANANANA\n");
     }
 
     //SErial clock (Mhz) should be: samplerate (Hz) * wordsize * channels
@@ -37,12 +40,12 @@ void initializeLocalization()
     respeaker.setVolumeSpeaker(45);
     
 
-    //sdWrapper.recordToWavFile("sd/record.wav", 5, callback(&respeaker, &Respeaker6MicArray::readMicrophones8));
+    sdWrapper.recordToWavFile("sd/record.wav", 5, callback(&respeaker, &Respeaker6MicArray::getPointerToReadBuffer));
 
-    //respeaker.test();
+
 
     //Change 32 -> 16 bit block A!
-    //sdWrapper.playWavFile("/sd/test3.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
+   //sdWrapper.playWavFile("/sd/record.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
 // respeaker.test();
     //HAL_Delay(1000);
     //respeaker.test();

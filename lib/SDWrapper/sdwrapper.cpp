@@ -23,7 +23,7 @@ void SDWrapper::initialize()
 
 /// @brief Play WAV file over speaker.
 /// @param filename Name of the WAV file, including the whole path (so including "/sd/x.wav")
-/// @param configureCallback 
+/// @param configureCallback
 /// @param writeCallback Callback to the I2S writing.
 /// @return Whether or not reading the file and starting the write sequence was successfull.
 bool SDWrapper::playWavFile(const char *filename, Callback<void(SampleRate sampleRate, WordSize wordSize, uint8_t channels)> configureCallback, Callback<void(uint16_t *data, uint16_t size)> writeCallback)
@@ -68,14 +68,14 @@ bool SDWrapper::playWavFile(const char *filename, Callback<void(SampleRate sampl
     uint16_t bitsPerSample = wavHeader.bitsPerSample;
     uint16_t numChannels = wavHeader.numChannels;
 
-    //configureCallback(getSampleRate(sampleRate), getWordSize(bitsPerSample), (uint8_t)numChannels);
+    // configureCallback(getSampleRate(sampleRate), getWordSize(bitsPerSample), (uint8_t)numChannels);
 
     fileReadStarted = true;
 
     return true;
 }
 
-bool SDWrapper::recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<void(uint8_t *data, uint16_t size)> readCallback)
+bool SDWrapper::recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<uint32_t *()> getReadBufferCallback)
 {
     // Mounting file system and checking if it was successfull:
     if (!mountFileSystem())
@@ -106,11 +106,12 @@ bool SDWrapper::recordToWavFile(const char *filename, uint8_t secondsToWrite, Ca
     communication_protocol->sendDebugMessage("Created file!\n");
 
     // Setting read callback:
-    this->readCallback = readCallback;
+    this->getReadBufferCallback = getReadBufferCallback;
     this->secondsToWrite = secondsToWrite;
 
     // Create a new WAV header and write it to the file:
-    WAVHeader wavHeader = createWavHeader(44100, 16, 8);
+    // WAVHeader wavHeader = createWavHeader(44100, 16, 8);
+    WAVHeader wavHeader = createWavHeader(44100, 24, 2);
 
     fwrite(&wavHeader, 1, sizeof(WAVHeader), fileWrite);
 
@@ -128,13 +129,8 @@ void SDWrapper::signalWriteDone()
 
 void SDWrapper::signalReadDone()
 {
-    // char msg[100];
-    // snprintf(msg, sizeof(msg), "data: %d, %d, %d, %d.\n", audioData[0], audioData[64], audioData[256], audioData[512]);
-    // communication_protocol->sendDebugMessage(msg);
     readDone = true;
 }
-
-uint8_t test[I2S_BLOCK_SIZE /2];
 
 void SDWrapper::run()
 {
@@ -173,13 +169,36 @@ void SDWrapper::run()
         // If sample rade is 44100 khz, 44100 uint16_t array data elements are required for 1 second
         if (bytesWritten < (secondsToWrite * sampleCount))
         {
+            // Grab data from buffer in I2S class and write it to the file :)
+            uint32_t *readBuffer = getReadBufferCallback();
+
             // uint16_t audioData[128 * 8];
 
-            readCallback(audioData, 128 * 8);
+            for (int i = 0; i < I2S_BLOCK_SIZE; i += 2)
+            {
+                uint32_t leftSample = readBuffer[i];
+                uint32_t rightSample = readBuffer[i + 1];
 
-            // fwrite(audioData, sizeof(uint16_t), 128 * 8, fileWrite);
+                leftSample = (leftSample << 8) >> 8;
+                rightSample = (rightSample << 8) >> 8;
+               
+                fwrite(&leftSample, DATA_WRITE_SIZE, 1, fileWrite);
+                fwrite(&rightSample, DATA_WRITE_SIZE, 1, fileWrite);
+            }
 
-            bytesWritten += 128;
+            //fwrite(&readBuffer[0], 3, I2S_BLOCK_SIZE, fileWrite);
+
+            //char msg[100];
+
+            // for (int i = 0; i < 20; i++)
+            // {
+            //     snprintf(msg, sizeof(msg), "[%d] = 0x%lx, ", i, readBuffer[i]);
+
+            //     communication_protocol->sendDebugMessage(msg);
+            // }
+            // communication_protocol->sendDebugMessage("\n");
+
+            bytesWritten += I2S_BLOCK_SIZE;
         }
         else
         {
@@ -230,15 +249,15 @@ void SDWrapper::finishWavFileRecording()
 
     // Offset to the subchunk2Size field
     fseek(fileWrite, 40, SEEK_SET);
-    uint32_t dataSize = sampleCount * sizeof(uint16_t);
+    uint32_t dataSize = bytesWritten * sizeof(uint32_t);
     fwrite(&dataSize, 4, 1, fileWrite);
 
     // Close the WAV file
     fclose(fileWrite);
 
-    char msg[100];
-    snprintf(msg, sizeof(msg), "File size: %d, data size: %d.\n", fileSize, dataSize);
-    communication_protocol->sendDebugMessage(msg);
+    // char msg[100];
+    // snprintf(msg, sizeof(msg), "File size: %d, data size: %d.\n", fileSize, dataSize);
+    // communication_protocol->sendDebugMessage(msg);
 
     readDone = true;
     fileWriteStarted = false;
@@ -291,16 +310,32 @@ WAVHeader SDWrapper::createWavHeader(uint32_t sampleRate, uint16_t bitsPerSample
 {
     WAVHeader wavHeader;
 
-    strcpy(wavHeader.chunkID, "RIFF");
+    wavHeader.chunkID[0] = 'R';
+    wavHeader.chunkID[1] = 'I';
+    wavHeader.chunkID[2] = 'F';
+    wavHeader.chunkID[3] = 'F';
     wavHeader.chunkSize = 0; // Will be updated later
-    strcpy(wavHeader.format, "WAVE");
-    strcpy(wavHeader.subchunk1ID, "fmt ");
-    wavHeader.subchunk1Size = 16;            // Size of the format subchunk
-    wavHeader.audioFormat = 1;               // PCM audio format
-    wavHeader.numChannels = numChannels;     // 1 channel (mono)
-    wavHeader.sampleRate = sampleRate;       // Sample rate (e.g., 44.1 kHz)
+    wavHeader.format[0] = 'W';
+    wavHeader.format[1] = 'A';
+    wavHeader.format[2] = 'V';
+    wavHeader.format[3] = 'E';
+    wavHeader.subchunk1ID[0] = 'f';
+    wavHeader.subchunk1ID[1] = 'm';
+    wavHeader.subchunk1ID[2] = 't';
+    wavHeader.subchunk1ID[3] = ' ';
+    wavHeader.subchunk1Size = 16;        // Size of the format subchunk
+    wavHeader.audioFormat = 1;           // PCM audio format
+    wavHeader.numChannels = numChannels; // 1 channel (mono)
+    wavHeader.sampleRate = sampleRate;   // Sample rate (e.g., 44.1 kHz)
+
+    wavHeader.byteRate = sampleRate * numChannels * (bitsPerSample / 8); // SampleRate * NumChannels * BitsPerSample/8
+    wavHeader.blockAlign = numChannels * (bitsPerSample / 8);            // NumChannels * BitsPerSample/8  // 2=16-bit mono, 4=16-bit stereo
+
     wavHeader.bitsPerSample = bitsPerSample; // 16-bit audio
-    strcpy(wavHeader.subchunk2ID, "data");
+    wavHeader.subchunk2ID[0] = 'd';
+    wavHeader.subchunk2ID[1] = 'a';
+    wavHeader.subchunk2ID[2] = 't';
+    wavHeader.subchunk2ID[3] = 'a';
     wavHeader.subchunk2Size = 0; // Will be updated later
 
     return wavHeader;

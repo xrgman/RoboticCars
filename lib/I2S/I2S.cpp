@@ -2,9 +2,7 @@
 
 // #define TRANSMITTER_MASTER
 
-#define SAI_DMA_BUFFER_SIZE 128 // 2000 //(320 * 8 * 2)
-#define SAI_DMA_GET SAI_DMA_BUFFER_SIZE
-static uint32_t __attribute__((section(".sai_dma_buffer_section"))) __attribute__((aligned(32))) sai_receive_buffer[SAI_DMA_BUFFER_SIZE] = {0};
+static uint32_t __attribute__((section(".sai_dma_buffer_section"))) __attribute__((aligned(32))) sai_receive_buffer[I2S_BLOCK_SIZE] = {0};
 // static uint16_t __attribute__((section(".sai_dma_buffer_section"))) __attribute__((aligned(32))) sai_transmit_buffer[320 * 8] = {0};
 
 static uint32_t SAI1_client = 0;
@@ -90,13 +88,14 @@ void I2S::initialize(uint32_t sampleRateOutput, uint8_t wordSizeOutput, uint8_t 
   hsai_BlockA1.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
   hsai_BlockA1.Init.NoDivider = SAI_MASTERDIVIDER_ENABLE;
   hsai_BlockA1.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_FULL;
-  hsai_BlockA1.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_16K;
+  hsai_BlockA1.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_44K;
   hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
   // hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_OUTBLOCKA_ENABLE;
   hsai_BlockA1.Init.MonoStereoMode = SAI_STEREOMODE;
   hsai_BlockA1.Init.CompandingMode = SAI_NOCOMPANDING;
 
-  if (HAL_SAI_InitProtocol(&hsai_BlockA1, SAI_I2S_STANDARD, SAI_PROTOCOL_DATASIZE_32BIT, 2) != HAL_OK)
+  //The 2 here represents number of channels, so should be 6 eventually (or 8)
+  if (HAL_SAI_InitProtocol(&hsai_BlockA1, SAI_I2S_STANDARD, SAI_PROTOCOL_DATASIZE_24BIT, 2) != HAL_OK)
   {
     communication_protocol->sendDebugMessage("Failed to initialize SAI block A\n");
   }
@@ -123,7 +122,7 @@ void I2S::initialize(uint32_t sampleRateOutput, uint8_t wordSizeOutput, uint8_t 
   {
     startedReceiving = true;
 
-    if (HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t *)sai_receive_buffer, SAI_DMA_GET) != HAL_OK) //8000
+    if (HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t *)sai_receive_buffer, I2S_BLOCK_SIZE) != HAL_OK) //8000
     {
       communication_protocol->sendDebugMessage("Failed to start.\n");
     }
@@ -222,59 +221,8 @@ bool I2S::write(uint32_t *buff, uint16_t nrOfElements)
   return write(writeBuffer, nrOfElements * 4);
 }
 
-/// @brief Read 8-bit data from the I2S bus.
-/// @param buff Buffer to read data into.
-/// @param nrOfElements Number of elements to read (Max: 2048)
-/// @return Whether reading the data was successfull.
-bool I2S::read(uint8_t *buff, uint16_t nrOfElements)
-{
-// printf("Reading 8-bit\n");
-
-// HAL_SAI_Abort(&hsai_BlockB1);
-// HAL_SAI_Abort(&hsai_BlockA1);
-
-// Transmit needs to be in progress for this to work????
-// Match read and write speeds?
-#ifdef TRANSMITTER_MASTER
-  if (HAL_SAI_Receive_DMA(&hsai_BlockB1, buff, nrOfElements) != HAL_OK)
-  {
-    printf("Failed reading 8-bit\n");
-  }
-#else
-  if (HAL_SAI_Receive_DMA(&hsai_BlockA1, buff, nrOfElements) != HAL_OK)
-  {
-    printf("Failed reading 8-bit\n");
-  }
-
-#endif
-
-  return true;
-  // return HAL_SAI_Receive_DMA(&hsai_BlockA1, buff, nrOfElements) == HAL_OK;
-}
-
-/// @brief Read 16-bit data from the I2S bus.
-/// @param buff Buffer to read data into.
-/// @param nrOfElements Number of elements to read (Max: 2048)
-/// @return Whether reading the data was successfull.
-bool I2S::read(uint16_t *buff, uint16_t nrOfElements)
-{
-
-  return HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t *)buff, nrOfElements * 2) == HAL_OK;
-
-  // for (int i = 0; i < nrOfElements; i++)
-  // {
-  //   buff[i] = ((uint16_t)readBuffer[i * 2] << 8) | readBuffer[i * 2 + 1];
-  // }
-
-  // return true;
-}
-
-/// @brief Read 32-bit data from the I2S bus.
-/// @param buff Buffer to read data into.
-/// @param nrOfElements Number of elements to read (Max: 2048)
-/// @return Whether reading the data was successfull.
-bool I2S::read(uint32_t *buff, uint16_t nrOfElements)
-{
+uint32_t* I2S::getPointerToReadBuffer() {
+  return sai_receive_buffer;
 }
 
 //*********************************************************************************************

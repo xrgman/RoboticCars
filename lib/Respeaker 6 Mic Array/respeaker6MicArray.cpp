@@ -198,6 +198,12 @@ bool Respeaker6MicArray::configureSpeaker(SampleRate sampleRate, WordSize wordSi
     return ok;
 }
 
+/// @brief Get pointer to the read buffer of I2S.
+/// @return Pointer to the read buffer. 
+uint32_t* Respeaker6MicArray::getPointerToReadBuffer() {
+    return i2s.getPointerToReadBuffer();
+}
+
 //**************************************
 //******** Write functions *************
 //**************************************
@@ -224,34 +230,6 @@ void Respeaker6MicArray::writeSpeaker16(uint16_t *data, uint16_t size)
 void Respeaker6MicArray::writeSpeaker32(uint32_t *data, uint16_t size)
 {
     i2s.write(data, size);
-}
-
-//**************************************
-//******** Read functions *************
-//**************************************
-
-/// @brief Read 8 bit data to the speaker module.
-/// @param data Array to read data into.
-/// @param size Size of the data array.
-void Respeaker6MicArray::readMicrophones8(uint8_t *data, uint16_t size)
-{
-    i2s.read(data, size);
-}
-
-/// @brief Read 16 bit data to the speaker module.
-/// @param data Array to read data into.
-/// @param size Size of the data array.
-void Respeaker6MicArray::readMicrophones16(uint16_t *data, uint16_t size)
-{
-    i2s.read(data, size);
-}
-
-/// @brief Read 32 bit data to the speaker module.
-/// @param data Array to read data into.
-/// @param size Size of the data array.
-void Respeaker6MicArray::readMicrophones32(uint32_t *data, uint16_t size)
-{
-    i2s.read(data, size);
 }
 
 //**************************************
@@ -283,10 +261,6 @@ void Respeaker6MicArray::onI2SRxCpltCallback()
     {
         onI2SReadDone();
     }
-
-    // char msg[100];
-    // snprintf(msg, sizeof(msg), "Data: %d, %d, %d, %d.\n", buff[0], buff[64], buff[256], buff[512]);
-    // communication->sendDebugMessage(msg);)
 }
 
 void Respeaker6MicArray::run()
@@ -295,6 +269,6 @@ void Respeaker6MicArray::run()
 }
 
 void Respeaker6MicArray::test() {
-    i2s.write(buff, 1024);
+    //i2s.write(buff, 1024);
     // i2s.read(buff, 1024);
 }

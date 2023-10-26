@@ -7,6 +7,9 @@
 #include "SDBlockDevice.h"
 #include "FATFileSystem.h"
 
+#define DATA_WRITE_SIZE 3 //2 for 16 bit, 3 for 24 bit, etc.
+
+
 // WAV header structure
 #pragma pack(push, 1) // Ensure correct packing of the struct
 struct WAVHeader
@@ -39,7 +42,7 @@ public:
 
     void initialize();
     bool playWavFile(const char *filename, Callback<void(SampleRate sampleRate, WordSize wordSize, uint8_t channels)> configureCallback, Callback<void(uint16_t *data, uint16_t size)> writeCallback);
-    bool recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<void(uint8_t *data, uint16_t size)> readCallback);
+    bool recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<uint32_t*()> getReadBufferCallback);
 
     void signalWriteDone();
     void signalReadDone();
@@ -52,7 +55,7 @@ private:
     FATFileSystem fs;
 
     Callback<void(uint16_t *data, uint16_t size)> writeCallback;
-    Callback<void(uint8_t *data, uint16_t size)> readCallback;
+    Callback<uint32_t *()> getReadBufferCallback;
 
     FILE *fileRead;
     FILE *fileWrite;

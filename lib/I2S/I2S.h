@@ -32,9 +32,7 @@ class I2S {
         bool write(uint16_t *buff, uint16_t nrOfElements);
         bool write(uint32_t *buff, uint16_t nrOfElements);
 
-        bool read(uint8_t *buff, uint16_t nrOfElements);
-        bool read(uint16_t *buff, uint16_t nrOfElements);
-        bool read(uint32_t *buff, uint16_t nrOfElements);
+        uint32_t* getPointerToReadBuffer();
 
         uint32_t getSampleRateOutput();
         uint8_t getWordSizeInput();
