@@ -2,10 +2,16 @@
 #define I2S_H
 
 #include "mbed.h"
+#include "enums.h"
 #include "stm32f7xx_hal.h"
 #include "communication.h"
 
 #define I2S_BLOCK_SIZE 2048//2056
+#define I2S_SAMPLE_RATE SAMPLE_RATE_44100
+#define I2S_WORDSIZE_INPUT WORD_SIZE_24_BITS
+#define I2S_WORDSIZE_OUTPUT WORD_SIZE_16_BITS
+#define I2S_NUMCHANNELS_INPUT NUM_CHANNELS_2
+#define I2S_NUMCHANNELS_OUTPUT NUM_CHANNELS_2
 
 #ifdef __cplusplus
  extern "C" {
@@ -24,7 +30,7 @@ class I2S {
     public:
         I2S(PinName sd, PinName ws, PinName clk, Communication *comm);
 
-        void initialize(uint32_t sampleRateOutput, uint8_t wordSizeInput, uint8_t wordSizeOutput);
+        bool initialize(uint32_t sampleRate, uint8_t wordSizeInput, uint8_t wordSizeOutput, uint8_t numChannelsInput, uint8_t numChannelsOutput);
         void setOnTxCpltCallback(Callback<void()> onTxCpltCallback);
         void setOnRxCpltCallback(Callback<void()> onRxCpltCallback);
 
@@ -34,13 +40,14 @@ class I2S {
 
         uint32_t* getPointerToReadBuffer();
 
-        uint32_t getSampleRateOutput();
+        uint32_t getSampleRate();
         uint8_t getWordSizeInput();
         uint8_t getWordSizeOutput();
+        uint8_t getNumChannelsInput();
+        uint8_t getNumChannelsOutput();
 
         //Needed from inside the callback:
         void printErrorMessage(const char *message);
-        void run();
 
         Callback<void()> onTxCpltCallback;
         Callback<void()> onRxCpltCallback;
@@ -50,9 +57,10 @@ class I2S {
         
         // SAI_HandleTypeDef hsai_BlockA1;
         // SAI_HandleTypeDef hsai_BlockB1;
+        bool initialized = false;
 
-        uint32_t sampleRateOutput;
-        uint8_t wordSizeInput, wordSizeOutput;
+        uint32_t sampleRate;
+        uint8_t wordSizeInput, wordSizeOutput, numChannelsInput, numChannelsOutput;
 
         void initializeClocks();
 };

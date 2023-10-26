@@ -2,8 +2,6 @@
 #include "pinDefinitions.h"
 #include "beep.h"
 
-uint8_t buff[1024];
-
 Respeaker6MicArray::Respeaker6MicArray(PinName buttonPin, I2C *i2c, Communication *comm)
     : button(buttonPin),
       ac101(i2c, RESPEAKER6MIC_AC101_ADDRESS, RESPEAKER6MIC_AC101_AMP_EN_PIN),
@@ -12,6 +10,13 @@ Respeaker6MicArray::Respeaker6MicArray(PinName buttonPin, I2C *i2c, Communicatio
       i2s(RESPEAKER6MIC_I2S_SD, RESPEAKER6MIC_I2S_W, RESPEAKER6MIC_I2S_CLK, comm)
 {
     communication = comm;
+
+    //Setting default values:
+    sampleRate = I2S_SAMPLE_RATE;
+    wordSizeInput = I2S_WORDSIZE_INPUT;
+    wordSizeOuput = I2S_WORDSIZE_OUTPUT;
+    numChannelsInput = I2S_NUMCHANNELS_INPUT;
+    numChannelsOutput = I2S_NUMCHANNELS_OUTPUT;
 
     button.rise(callback(this, &Respeaker6MicArray::onButtonInterruptRise)); // Release
 
@@ -25,11 +30,23 @@ bool Respeaker6MicArray::checkDeviceOperation(Communication *communication_proto
     ok &= ac108_1.checkDeviceOperation(communication_protocol);
     ok &= ac108_2.checkDeviceOperation(communication_protocol);
 
+    //Saving old configuration:
+    SampleRate oldSampleRate = sampleRate;
+    WordSize oldWordSizeInput = wordSizeInput;
+    WordSize oldWordSizeOutput = wordSizeOuput;
+    NumChannels oldNumChannelsInput = numChannelsInput;
+    NumChannels oldNumChannelsOutput = numChannelsOutput;
+
     // Playing beep:
     setVolumeSpeaker(40);
-    configureSpeaker(SAMPLE_RATE_44100, WORD_SIZE_16_BITS);
+    ok &= configure(SAMPLE_RATE_44100, WORD_SIZE_CURRENT, WORD_SIZE_16_BITS, NUM_CHANNELS_CURRENT, NUM_CHANNELS_CURRENT);
 
     i2s.write(data_beep, nrElementsBeep);
+
+    //Waiting and then restoring values:
+    HAL_Delay(1000);
+
+    ok &= configure(oldSampleRate, oldWordSizeInput, oldWordSizeOutput, oldNumChannelsInput, oldNumChannelsOutput);
 
     return ok;
 }
@@ -65,10 +82,19 @@ void Respeaker6MicArray::initialize()
 
     // ac108_2.stopCapture();
 
-    // Initialize i2s for 44Khz and 16 bits:
-    i2s.initialize(SAI_AUDIO_FREQUENCY_44K, SAI_PROTOCOL_DATASIZE_16BIT, SAI_PROTOCOL_DATASIZE_16BIT);
+    // Register I2S callbacks:
     i2s.setOnTxCpltCallback(callback(this, &Respeaker6MicArray::onI2STxCpltCallback));
     i2s.setOnRxCpltCallback(callback(this, &Respeaker6MicArray::onI2SRxCpltCallback));
+
+    // Configure the respeaker module:
+    bool ok = configure(I2S_SAMPLE_RATE, I2S_WORDSIZE_INPUT, I2S_WORDSIZE_OUTPUT, I2S_NUMCHANNELS_INPUT, I2S_NUMCHANNELS_OUTPUT);
+
+    if (!ok)
+    {
+        communication->sendDebugMessage("Failed to configure Respeaker module\n");
+
+        return;
+    }
 }
 
 /// @brief Set the callback function for when the button on the Respeaker board is clicked.
@@ -116,31 +142,71 @@ bool Respeaker6MicArray::setVolumeMicrophones(uint8_t volume)
 /// @param sampleRate Sample rate of the data that needs to be outputted.
 /// @param wordSize  Word size of the data to be outputted
 /// @return Whether or not it was a success.
-bool Respeaker6MicArray::configureSpeaker(SampleRate sampleRate, WordSize wordSize)
+bool Respeaker6MicArray::configure(SampleRate sampleRate, WordSize wordSizeInput, WordSize wordSizeOutput, NumChannels numChannelsInput, NumChannels numChannelsOutput)
 {
     bool ok = true;
 
-    // Setting word size:
-    AC101::I2sWordSize_t wordSizeAC101 = AC101::WORD_SIZE_8_BITS;
-    uint8_t wordSizeI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+    //Saving values for later:
+    this->sampleRate = sampleRate == SAMPLE_RATE_CURRENT ? this->sampleRate : sampleRate;
+    this->wordSizeInput = wordSizeInput == WORD_SIZE_CURRENT ? this->wordSizeInput : wordSizeInput;
+    this->wordSizeOuput = wordSizeOuput == WORD_SIZE_CURRENT ? this->wordSizeOuput : wordSizeOuput;
+    this->numChannelsInput = numChannelsInput == NUM_CHANNELS_CURRENT ? this->numChannelsInput : numChannelsInput;
+    this->numChannelsOutput = numChannelsOutput == NUM_CHANNELS_CURRENT ? this->numChannelsOutput : numChannelsOutput;
 
-    switch (wordSize)
+    // Setting word size input:
+    uint8_t wordSizeInputI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+
+    switch (wordSizeInput)
     {
+    case WORD_SIZE_CURRENT:
+        // wordSizeAC108 =
+        wordSizeInputI2S = i2s.getWordSizeInput();
+        break;
+    case WORD_SIZE_8_BITS:
+
+        wordSizeInputI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+        break;
+    case WORD_SIZE_16_BITS:
+
+        wordSizeInputI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+        break;
+    case WORD_SIZE_20_BITS:
+
+        wordSizeInputI2S = SAI_PROTOCOL_DATASIZE_24BIT;
+        break;
+    case WORD_SIZE_24_BITS:
+
+        wordSizeInputI2S = SAI_PROTOCOL_DATASIZE_24BIT;
+        break;
+    }
+
+    // TODO set in ac108
+
+    // Setting word size output:
+    AC101::I2sWordSize_t wordSizeAC101 = AC101::WORD_SIZE_8_BITS;
+    uint8_t wordSizeOutputI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+
+    switch (wordSizeOutput)
+    {
+    case WORD_SIZE_CURRENT:
+        // wordSizeAC101 =
+        wordSizeOutputI2S = i2s.getWordSizeOutput();
+        break;
     case WORD_SIZE_8_BITS:
         wordSizeAC101 = AC101::WORD_SIZE_8_BITS;
-        wordSizeI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+        wordSizeOutputI2S = SAI_PROTOCOL_DATASIZE_16BIT;
         break;
     case WORD_SIZE_16_BITS:
         wordSizeAC101 = AC101::WORD_SIZE_16_BITS;
-        wordSizeI2S = SAI_PROTOCOL_DATASIZE_16BIT;
+        wordSizeOutputI2S = SAI_PROTOCOL_DATASIZE_16BIT;
         break;
     case WORD_SIZE_20_BITS:
         wordSizeAC101 = AC101::WORD_SIZE_20_BITS;
-        wordSizeI2S = SAI_PROTOCOL_DATASIZE_24BIT;
+        wordSizeOutputI2S = SAI_PROTOCOL_DATASIZE_24BIT;
         break;
     case WORD_SIZE_24_BITS:
         wordSizeAC101 = AC101::WORD_SIZE_24_BITS;
-        wordSizeI2S = SAI_PROTOCOL_DATASIZE_24BIT;
+        wordSizeOutputI2S = SAI_PROTOCOL_DATASIZE_24BIT;
         break;
     }
 
@@ -152,6 +218,9 @@ bool Respeaker6MicArray::configureSpeaker(SampleRate sampleRate, WordSize wordSi
 
     switch (sampleRate)
     {
+    case SAMPLE_RATE_CURRENT:
+        // TODO get from ac101 and ac108
+        sampleRateI2S = i2s.getSampleRate();
     case SAMPLE_RATE_8000:
         sampleRateAC101 = AC101::SAMPLE_RATE_8000;
         sampleRateI2S = SAI_AUDIO_FREQUENCY_8K;
@@ -191,16 +260,21 @@ bool Respeaker6MicArray::configureSpeaker(SampleRate sampleRate, WordSize wordSi
     }
 
     ok &= ac101.setI2sSampleRate(sampleRateAC101);
-    // ok &= ac101.setI2sSampleRate(AC101::SAMPLE_RATE_44100);
+    // TODO set in ac108.
 
-    i2s.initialize(sampleRateI2S, wordSizeI2S, i2s.getWordSizeInput());
+    // Get number channels input:
+    uint8_t channelsInput = numChannelsInput == NUM_CHANNELS_CURRENT ? i2s.getNumChannelsInput() : ((uint8_t)numChannelsInput);
+    uint8_t channelsOutput = numChannelsOutput == NUM_CHANNELS_CURRENT ? i2s.getNumChannelsOutput() : ((uint8_t)numChannelsOutput);
+
+    ok &= i2s.initialize(sampleRateI2S, wordSizeInputI2S, wordSizeOutputI2S, channelsInput, channelsOutput);
 
     return ok;
 }
 
 /// @brief Get pointer to the read buffer of I2S.
-/// @return Pointer to the read buffer. 
-uint32_t* Respeaker6MicArray::getPointerToReadBuffer() {
+/// @return Pointer to the read buffer.
+uint32_t *Respeaker6MicArray::getPointerToReadBuffer()
+{
     return i2s.getPointerToReadBuffer();
 }
 
@@ -265,10 +339,4 @@ void Respeaker6MicArray::onI2SRxCpltCallback()
 
 void Respeaker6MicArray::run()
 {
-    i2s.run();
-}
-
-void Respeaker6MicArray::test() {
-    //i2s.write(buff, 1024);
-    // i2s.read(buff, 1024);
 }

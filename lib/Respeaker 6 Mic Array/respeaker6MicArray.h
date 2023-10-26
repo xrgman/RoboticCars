@@ -24,7 +24,7 @@ public:
     bool setVolumeSpeaker(uint8_t volume);
     bool setVolumeMicrophones(uint8_t volume);
 
-    bool configureSpeaker(SampleRate sampleRate, WordSize wordSize);
+    bool configure(SampleRate sampleRate, WordSize wordSizeInput, WordSize wordSizeOutput, NumChannels numChannelsInput, NumChannels numChannelsOutput);
     
     void writeSpeaker8(uint8_t *data, uint16_t size);
     void writeSpeaker16(uint16_t *data, uint16_t size);
@@ -33,7 +33,6 @@ public:
     uint32_t *getPointerToReadBuffer();
 
     void run();
-    void test();
 
 private:
     void (*onButtonClick)();
@@ -47,11 +46,13 @@ private:
 
     Communication *communication;
 
+    SampleRate sampleRate;
+    WordSize wordSizeInput, wordSizeOuput;
+    NumChannels numChannelsInput, numChannelsOutput;
+
     void onButtonInterruptRise();
     void onI2STxCpltCallback();
     void onI2SRxCpltCallback();
-
-    //Fields used for playback of larger files:
 
 
     Timer debounceTimer;
