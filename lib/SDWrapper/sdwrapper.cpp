@@ -21,6 +21,11 @@ void SDWrapper::initialize()
     sd.frequency(25000000);
 }
 
+/// @brief Play WAV file over speaker.
+/// @param filename Name of the WAV file, including the whole path (so including "/sd/x.wav")
+/// @param configureCallback 
+/// @param writeCallback Callback to the I2S writing.
+/// @return Whether or not reading the file and starting the write sequence was successfull.
 bool SDWrapper::playWavFile(const char *filename, Callback<void(SampleRate sampleRate, WordSize wordSize, uint8_t channels)> configureCallback, Callback<void(uint16_t *data, uint16_t size)> writeCallback)
 {
     // Checking if another file is not playing:

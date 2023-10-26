@@ -41,7 +41,8 @@ void initializeLocalization()
 
     //respeaker.test();
 
-    sdWrapper.playWavFile("/sd/test3.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
+    //Change 32 -> 16 bit block A!
+    //sdWrapper.playWavFile("/sd/test3.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
 // respeaker.test();
     //HAL_Delay(1000);
     //respeaker.test();

@@ -2,9 +2,10 @@
 
 // #define TRANSMITTER_MASTER
 
-#define SAI_DMA_BUFFER_SIZE 2000 //(320 * 8 * 2)
-static uint16_t __attribute__((section(".sai_dma_buffer_section"))) __attribute__((aligned(32))) sai_receive_buffer[SAI_DMA_BUFFER_SIZE] = {0};
-static uint16_t __attribute__((section(".sai_dma_buffer_section"))) __attribute__((aligned(32))) sai_transmit_buffer[320 * 8] = {0};
+#define SAI_DMA_BUFFER_SIZE 128 // 2000 //(320 * 8 * 2)
+#define SAI_DMA_GET SAI_DMA_BUFFER_SIZE
+static uint32_t __attribute__((section(".sai_dma_buffer_section"))) __attribute__((aligned(32))) sai_receive_buffer[SAI_DMA_BUFFER_SIZE] = {0};
+// static uint16_t __attribute__((section(".sai_dma_buffer_section"))) __attribute__((aligned(32))) sai_transmit_buffer[320 * 8] = {0};
 
 static uint32_t SAI1_client = 0;
 static bool startedReceiving = 0;
@@ -12,7 +13,6 @@ DMA_HandleTypeDef hdma_sai1_a, hdma_sai1_b;
 SAI_HandleTypeDef hsai_BlockA1, hsai_BlockB1;
 
 uint8_t writeBuffer[I2S_BLOCK_SIZE];
-uint8_t readBuffer[2056];
 bool doneReading = true;
 
 I2S::I2S(PinName sd, PinName ws, PinName clk, Communication *comm)
@@ -26,11 +26,6 @@ I2S::I2S(PinName sd, PinName ws, PinName clk, Communication *comm)
   i2s_instance = this;
 
   initializeClocks();
-
-  for (int i = 0; i < 2056; i++)
-  {
-    sai_receive_buffer[i] = 0xFFF6;
-  }
 }
 
 void I2S::initialize(uint32_t sampleRateOutput, uint8_t wordSizeOutput, uint8_t wordSizeInput)
@@ -95,13 +90,13 @@ void I2S::initialize(uint32_t sampleRateOutput, uint8_t wordSizeOutput, uint8_t 
   hsai_BlockA1.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
   hsai_BlockA1.Init.NoDivider = SAI_MASTERDIVIDER_ENABLE;
   hsai_BlockA1.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_FULL;
-  hsai_BlockA1.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_22K;
-  // hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
-  hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_OUTBLOCKA_ENABLE;
+  hsai_BlockA1.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_16K;
+  hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
+  // hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_OUTBLOCKA_ENABLE;
   hsai_BlockA1.Init.MonoStereoMode = SAI_STEREOMODE;
   hsai_BlockA1.Init.CompandingMode = SAI_NOCOMPANDING;
 
-  if (HAL_SAI_InitProtocol(&hsai_BlockA1, SAI_I2S_STANDARD, SAI_PROTOCOL_DATASIZE_16BIT, 2) != HAL_OK)
+  if (HAL_SAI_InitProtocol(&hsai_BlockA1, SAI_I2S_STANDARD, SAI_PROTOCOL_DATASIZE_32BIT, 2) != HAL_OK)
   {
     communication_protocol->sendDebugMessage("Failed to initialize SAI block A\n");
   }
@@ -111,8 +106,8 @@ void I2S::initialize(uint32_t sampleRateOutput, uint8_t wordSizeOutput, uint8_t 
   hsai_BlockB1.Init.Synchro = SAI_SYNCHRONOUS;
   hsai_BlockB1.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
   hsai_BlockB1.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_FULL;
-  // hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
-  hsai_BlockB1.Init.SynchroExt = SAI_SYNCEXT_OUTBLOCKA_ENABLE;
+  hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
+  // hsai_BlockB1.Init.SynchroExt = SAI_SYNCEXT_OUTBLOCKA_ENABLE;
   hsai_BlockB1.Init.MonoStereoMode = SAI_STEREOMODE;
   hsai_BlockB1.Init.CompandingMode = SAI_NOCOMPANDING;
   hsai_BlockB1.Init.TriState = SAI_OUTPUT_NOTRELEASED;
@@ -124,12 +119,11 @@ void I2S::initialize(uint32_t sampleRateOutput, uint8_t wordSizeOutput, uint8_t 
 
 #endif
 
-  // HAL_SAI_Transmit_DMA(&hsai_BlockA1, writeBuffer, I2S_BLOCK_SIZE);
   if (!startedReceiving)
   {
     startedReceiving = true;
 
-    if (HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t *)sai_receive_buffer, 4000))
+    if (HAL_SAI_Receive_DMA(&hsai_BlockA1, (uint8_t *)sai_receive_buffer, SAI_DMA_GET) != HAL_OK) //8000
     {
       communication_protocol->sendDebugMessage("Failed to start.\n");
     }
@@ -167,7 +161,6 @@ void I2S::setOnRxCpltCallback(Callback<void()> onRxCpltCallback)
   this->onRxCpltCallback = onRxCpltCallback;
 }
 
-uint8_t emptyBuff[2048];
 
 void I2S::run()
 {
@@ -322,21 +315,10 @@ void I2S::printErrorMessage(const char *message)
 //******** SAI callbacks **********************************************************************
 //*********************************************************************************************
 
-void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai)
-{
-}
-
 /// @brief Called when Sending of message is done :)
 /// @param hi2s
 void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 {
-  // Set new data in buffer?
-  // We should realy test this.......
-
-  //i2s_instance->printErrorMessage("TX done!!!!!!!.\n");
-
-  // HAL_SAI_Transmit_DMA(hsai, &writeBuffer[0], I2S_BLOCK_SIZE);
-
   // Calling callback if defined:
   if (i2s_instance->onTxCpltCallback)
   {
@@ -344,40 +326,29 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
   }
 }
 
-void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai)
-{
-  // char msg[100];
-  // snprintf(msg, sizeof(msg), "Data received half: %d, %d, %d\n", readBuffer[0], readBuffer[512], readBuffer[1024]);
-
-  // i2s_instance->printErrorMessage(msg);
-}
-
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
 {
   // doneReading = true;
   // i2s_instance->printErrorMessage("RX done!!!!!!!.\n");
-
-  for (int i = 0; i < SAI_DMA_BUFFER_SIZE; i++)
-  {
-    if (sai_receive_buffer[i] > 0 && sai_receive_buffer[i] < 0xFFFF)
-    {
-      char msg[100];
-      snprintf(msg, sizeof(msg), "Found one at %d = 0x%x\n", i, sai_receive_buffer[i]);
-
-      // i2s_instance->printErrorMessage(msg);
-    }
-  }
-
   // char msg[100];
-  // snprintf(msg, sizeof(msg), "Data received: %d, %d, %d\n", readBuffer[0], readBuffer[512], readBuffer[1024]);
 
-  // i2s_instance->printErrorMessage(msg);
+  // for (int i = 0; i < 20; i++)
+  // {
+  //   //  if (sai_receive_buffer[i] > 0 && sai_receive_buffer[i] < 0xFFFF)
+  //   //   {
+
+  //   snprintf(msg, sizeof(msg), "[%d] = 0x%lx, ", i, sai_receive_buffer[i]);
+
+  //   i2s_instance->printErrorMessage(msg);
+  //   //}
+  // }
+  // i2s_instance->printErrorMessage("\n");
 
   // Calling callback if defined:
-  // if (i2s_instance->onRxCpltCallback)
-  // {
-  //   i2s_instance->onRxCpltCallback();
-  // }
+  if (i2s_instance->onRxCpltCallback)
+  {
+    i2s_instance->onRxCpltCallback();
+  }
 }
 
 void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *hsai)
@@ -522,8 +493,8 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai)
     hdma_sai1_a.Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma_sai1_a.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_sai1_a.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_sai1_a.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_sai1_a.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_sai1_a.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD; // DMA_PDATAALIGN_WORD; // DMA_PDATAALIGN_BYTE;
+    hdma_sai1_a.Init.MemDataAlignment = DMA_PDATAALIGN_WORD;    // DMA_MDATAALIGN_BYTE;
     hdma_sai1_a.Init.Mode = DMA_CIRCULAR;
     hdma_sai1_a.Init.Priority = DMA_PRIORITY_VERY_HIGH;
     hdma_sai1_a.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
@@ -680,7 +651,7 @@ void HAL_SAI_MspDeInit(SAI_HandleTypeDef *hsai)
 // Receive
 void DMA2_Stream1_IRQHandler(void)
 {
-  //i2s_instance->printErrorMessage("Interrupt stream 1 (Block A)\n");
+  // i2s_instance->printErrorMessage("Interrupt stream 1 (Block A)\n");
 
   HAL_DMA_IRQHandler(&hdma_sai1_a);
 }
@@ -688,7 +659,7 @@ void DMA2_Stream1_IRQHandler(void)
 // Transmit
 void DMA2_Stream0_IRQHandler(void)
 {
-  //i2s_instance->printErrorMessage("Interrupt stream 0 (Block B)\n");
+  // i2s_instance->printErrorMessage("Interrupt stream 0 (Block B)\n");
 
   HAL_DMA_IRQHandler(&hdma_sai1_b);
 }

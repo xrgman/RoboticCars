@@ -121,7 +121,7 @@ void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8
         break;
     }
     default:
-        break;
+        break; 
     }
 }
 
@@ -210,7 +210,7 @@ int main()
 
     //Disable D-cache:
     // SCB_DisableDCache();
-    // SCB_CleanInvalidateDCache();
+    SCB_CleanInvalidateDCache();
 
     //I2C settings:
     i2c_4.stop();
