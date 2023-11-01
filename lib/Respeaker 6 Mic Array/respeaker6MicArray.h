@@ -14,7 +14,7 @@ class Respeaker6MicArray : IEDevice
 public:
     Respeaker6MicArray(PinName buttonPin, I2C *i2c, Communication *comm);
 
-    void initialize();
+    bool initialize();
 
     bool checkDeviceOperation(Communication *communication_protocol);
     void setOnButtonClickListener(void (*onButtonClick)());
@@ -30,7 +30,9 @@ public:
     void writeSpeaker16(uint16_t *data, uint16_t size);
     void writeSpeaker32(uint32_t *data, uint16_t size);
 
-    uint32_t *getPointerToReadBuffer();
+    uint16_t *getRxBuffer16();
+    uint32_t *getRxBuffer32();
+
 
     void run();
 

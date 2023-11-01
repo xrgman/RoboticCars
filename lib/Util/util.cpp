@@ -102,7 +102,25 @@ uint32_t Util::getBitsFromData(uint32_t data, uint8_t start, uint8_t end) {
 /// @param start Start position, seen from the LSB.
 /// @param nrOfBits Number of bits up from the start bit to change.
 /// @param value New value for all of the bits that need to be changed. 
-bool Util::setBits(uint16_t *data, uint8_t start, uint8_t nrOfBits, uint8_t value) {
+bool Util::setBits(uint8_t *data, uint8_t start, uint8_t nrOfBits, uint8_t value) {
+    if(start > 7 || start+nrOfBits > 8 || value > 0xFF) {
+        return false;
+    }
+
+    uint8_t maskBits = pow(2, nrOfBits) - 1;
+    uint8_t mask = maskBits << start;
+
+    *data = ((*data & ~mask) | (value << start));
+
+    return true;
+}
+
+/// @brief Set one or more bits in a binary number to a specific value.
+/// @param data Binary data to be changed.
+/// @param start Start position, seen from the LSB.
+/// @param nrOfBits Number of bits up from the start bit to change.
+/// @param value New value for all of the bits that need to be changed. 
+bool Util::setBits(uint16_t *data, uint8_t start, uint8_t nrOfBits, uint16_t value) {
     if(start > 15 || start+nrOfBits > 16 || value > 0xFFFF) {
         return false;
     }

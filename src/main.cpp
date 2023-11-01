@@ -18,7 +18,6 @@
 #include "util.h"
 #include "localizationControl.h"
 
-
 #define WAIT_TIME_MS 100
 
 #define BANAAN
@@ -38,7 +37,7 @@ Leds leds;
 // I2C objects:
 I2C i2c_4(I2C_4_SDA, I2C_4_SCL);
 
-//Communication:
+// Communication:
 Communication comm(Communication::SERIAL);
 
 // Statemachine:
@@ -55,7 +54,7 @@ HCSR04 ultrasonicFront(ULTRASONIC_FRONT_TRIGGER_PIN, ULTRASONIC_FRONT_ECHO_PIN, 
 HCSR04 ultrasonicRight(ULTRASONIC_RIGHT_TRIGGER_PIN, ULTRASONIC_RIGHT_ECHO_PIN, &comm);
 HCSR04 ultrasonicLeft(ULTRASONIC_LEFT_TRIGGER_PIN, ULTRASONIC_LEFT_ECHO_PIN, &comm);
 
-// Respeaker: 
+// Respeaker:
 Respeaker6MicArray respeaker(RESPEAKER6MIC_BUTTON_PIN, &i2c_4, &comm);
 
 // SD wrapper:
@@ -76,12 +75,6 @@ void disableEmergencyMode()
 {
     statemachine.changeState(Statemachine::State::IDLE);
 }
-
-// extern "C" {
-//     void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
-//         comm.sendDebugMessage("Reached end!\n");
-//     }
-// }
 
 void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8_t command[])
 {
@@ -121,7 +114,7 @@ void command_callback(MessageType type, RelayOver relayOver, uint8_t size, uint8
         break;
     }
     default:
-        break; 
+        break;
     }
 }
 
@@ -183,7 +176,7 @@ void checkHardwareConnections()
     // Check operation of all hardware related to the motors:
     checkMotorOperation(&comm);
 
-    //Util::scanForI2CDevices(&i2c_4);
+    // Util::scanForI2CDevices(&i2c_4);
 }
 
 void test()
@@ -194,6 +187,7 @@ void test()
 // NULL IS NC :)
 int main()
 {
+  
     // Printing welcome message:
     char msg[45];
     snprintf(msg, sizeof(msg), "Robotic car - Running Mbed OS version %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
@@ -208,11 +202,11 @@ int main()
     comm.setCommunicationState(Communication::SERIAL);
     // comm.setCommunicationState(Communication::BLUETOOTH_ESP32);
 
-    //Disable D-cache:
-    // SCB_DisableDCache();
+    // Disable D-cache:
+    //  SCB_DisableDCache();
     SCB_CleanInvalidateDCache();
 
-    //I2C settings:
+    // I2C settings:
     i2c_4.stop();
     HAL_Delay(100);
     i2c_4.start();
@@ -230,17 +224,21 @@ int main()
     // initializeMotors(&comm);
 
     // Initializing respeaker array:"
-    respeaker.initialize();
+    if (!respeaker.initialize())
+    {
+        return 0; //Stop program from running
+    }
+
     respeaker.setOnButtonClickListener(&test);
 
-    //Initialize SD card:
+    // Initialize SD card:
     sdWrapper.initialize();
 
     // Initializing localization control:
     initializeLocalization();
 
     // Checking if all hardware is connected and functioning properly:
-    //checkHardwareConnections();
+    // checkHardwareConnections();
 
     while (true)
     {
@@ -276,18 +274,17 @@ int main()
             clearTimerFlag();
         }
 
-        //Running sd card thread, used for playing music files etc:
+        // Running sd card thread, used for playing music files etc:
         sdWrapper.run();
 
         // TEST: Respeaker
         respeaker.run();
 
-        //Run localization control:
+        // Run localization control:
         runLocalization();
 
         // TO-DO check if frequency is right: its too fast I guesss
         // processMotors(statemachine.getCurrentState());
-        HAL_Delay(10); //TODO remove :)
     }
 }
 

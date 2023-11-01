@@ -39,12 +39,14 @@ void initializeLocalization()
 
     respeaker.setVolumeSpeaker(45);
 
-    //respeaker.configureSpeaker(SAMPLE_RATE_44100, WORD_SIZE_16_BITS);
 
-    sdWrapper.recordToWavFile("sd/record.wav", 5, callback(&respeaker, &Respeaker6MicArray::getPointerToReadBuffer));
+
+    //respeaker.configure(SAMPLE_RATE_44100, WORD_SIZE_16_BITS, WORD_SIZE_16_BITS, NUM_CHANNELS_8, NUM_CHANNELS_8);
+    //sdWrapper.recordToWavFile("sd/record.wav", 5, callback(&respeaker, &Respeaker6MicArray::getRxBuffer16));
 
     // Change 32 -> 16 bit block A!
-    // sdWrapper.playWavFile("/sd/record.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
+    respeaker.configure(SAMPLE_RATE_44100, WORD_SIZE_16_BITS, WORD_SIZE_16_BITS, NUM_CHANNELS_2, NUM_CHANNELS_2);
+    sdWrapper.playWavFile("/sd/heart.wav", &configure, callback(&respeaker, &Respeaker6MicArray::writeSpeaker16));
     // respeaker.test();
     // HAL_Delay(1000);
     // respeaker.test();

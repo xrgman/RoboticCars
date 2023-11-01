@@ -3,26 +3,26 @@
 
 typedef enum
 {
-    SAMPLE_RATE_CURRENT, // Used to define that it doesn't need to be changed.
-    SAMPLE_RATE_8000,
-    SAMPLE_RATE_11052,
-    SAMPLE_RATE_16000,
-    SAMPLE_RATE_22050,
-    SAMPLE_RATE_32000,
-    SAMPLE_RATE_44100,
-    SAMPLE_RATE_48000,
-    SAMPLE_RATE_96000,
-    SAMPLE_RATE_192000
+    SAMPLE_RATE_CURRENT = 0, // Used to define that it doesn't need to be changed.
+    SAMPLE_RATE_8000 = 8000,
+    SAMPLE_RATE_11052 = 11052,
+    SAMPLE_RATE_16000 = 16000,
+    SAMPLE_RATE_22050 = 22050,
+    SAMPLE_RATE_32000 = 32000,
+    SAMPLE_RATE_44100 = 44100,
+    SAMPLE_RATE_48000 = 48000,
+    SAMPLE_RATE_96000 = 96000,
+    SAMPLE_RATE_192000 = 192000
 } SampleRate;
 
 typedef enum
 {
-    WORD_SIZE_CURRENT, // Used to define that it doesn't need to be changed.
-    WORD_SIZE_8_BITS,
-    WORD_SIZE_16_BITS,
-    WORD_SIZE_20_BITS,
-    WORD_SIZE_24_BITS,
-    WORD_SIZE_32_BITS
+    WORD_SIZE_CURRENT = 0, // Used to define that it doesn't need to be changed.
+    WORD_SIZE_8_BITS = 8,
+    WORD_SIZE_16_BITS = 16,
+    WORD_SIZE_20_BITS = 20,
+    WORD_SIZE_24_BITS = 24,
+    WORD_SIZE_32_BITS = 32
 } WordSize;
 
 typedef enum

@@ -70,12 +70,13 @@ bool SDWrapper::playWavFile(const char *filename, Callback<void(SampleRate sampl
 
     // configureCallback(getSampleRate(sampleRate), getWordSize(bitsPerSample), (uint8_t)numChannels);
 
+    samples = 0;
     fileReadStarted = true;
 
     return true;
 }
 
-bool SDWrapper::recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<uint32_t *()> getReadBufferCallback)
+bool SDWrapper::recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<uint16_t *()> getReadBufferCallback)
 {
     // Mounting file system and checking if it was successfull:
     if (!mountFileSystem())
@@ -141,13 +142,18 @@ void SDWrapper::run()
 
         // Block size (adjust as needed)
         uint16_t audioData[I2S_BLOCK_SIZE / 2];
+        //uint16_t audioData[I2S_BLOCK_SIZE];
 
         // Read and transmit audio data in blocks
-        if (!feof(fileRead))
+        if (!feof(fileRead) && samples <= 4024)
         {
             size_t bytesRead = fread((char *)audioData, 1, I2S_BLOCK_SIZE, fileRead);
+            //size_t bytesRead = fread(audioData, 2, I2S_BLOCK_SIZE, fileRead);
 
             writeCallback(audioData, (uint16_t)(bytesRead / 2));
+            //writeCallback(audioData, (uint16_t)(bytesRead));
+
+            samples++;
         }
         else
         {
@@ -170,25 +176,34 @@ void SDWrapper::run()
         if (bytesWritten < (secondsToWrite * sampleCount))
         {
             // Grab data from buffer in I2S class and write it to the file :)
-            uint32_t *readBuffer = getReadBufferCallback();
+            uint16_t *readBuffer = getReadBufferCallback();
 
-            // uint16_t audioData[128 * 8];
-
-            for (int i = 0; i < I2S_BLOCK_SIZE; i += 2)
+            for (int i = 0; i < I2S_BLOCK_SIZE; i += 8)
             {
-                uint32_t leftSample = readBuffer[i];
-                uint32_t rightSample = readBuffer[i + 1];
+                uint16_t sample0 = readBuffer[i];
+                uint16_t sample1 = readBuffer[i + 1];
+                uint16_t sample2 = readBuffer[i + 2];
+                uint16_t sample3 = readBuffer[i + 3];
+                uint16_t sample4 = readBuffer[i + 4];
+                uint16_t sample5 = readBuffer[i + 5];
+                uint16_t sample6 = readBuffer[i + 6];
+                uint16_t sample7 = readBuffer[i + 7];
 
-                leftSample = (leftSample << 8) >> 8;
-                rightSample = (rightSample << 8) >> 8;
-               
-                fwrite(&leftSample, DATA_WRITE_SIZE, 1, fileWrite);
-                fwrite(&rightSample, DATA_WRITE_SIZE, 1, fileWrite);
+                printf("%d, %d, %d, %d, %d, %d, %d, %d\n", sample0, sample1, sample2, sample3, sample4, sample5, sample6, sample7);
+
+                // uint32_t leftSample = readBuffer[i];
+                // uint32_t rightSample = readBuffer[i + 1];
+
+                // leftSample = (leftSample << 8) >> 8;
+                // rightSample = (rightSample << 8) >> 8;
+
+                // fwrite(&leftSample, DATA_WRITE_SIZE, 1, fileWrite);
+                // fwrite(&rightSample, DATA_WRITE_SIZE, 1, fileWrite);
             }
 
-            //fwrite(&readBuffer[0], 3, I2S_BLOCK_SIZE, fileWrite);
+            // fwrite(&readBuffer[0], 3, I2S_BLOCK_SIZE, fileWrite);
 
-            //char msg[100];
+            // char msg[100];
 
             // for (int i = 0; i < 20; i++)
             // {

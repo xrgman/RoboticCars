@@ -42,7 +42,7 @@ public:
 
     void initialize();
     bool playWavFile(const char *filename, Callback<void(SampleRate sampleRate, WordSize wordSize, uint8_t channels)> configureCallback, Callback<void(uint16_t *data, uint16_t size)> writeCallback);
-    bool recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<uint32_t*()> getReadBufferCallback);
+    bool recordToWavFile(const char *filename, uint8_t secondsToWrite, Callback<uint16_t*()> getReadBufferCallback);
 
     void signalWriteDone();
     void signalReadDone();
@@ -55,7 +55,7 @@ private:
     FATFileSystem fs;
 
     Callback<void(uint16_t *data, uint16_t size)> writeCallback;
-    Callback<uint32_t *()> getReadBufferCallback;
+    Callback<uint16_t *()> getReadBufferCallback;
 
     FILE *fileRead;
     FILE *fileWrite;
@@ -64,6 +64,7 @@ private:
     bool fileWriteStarted = false;
     bool writeDone = true;
     bool readDone = true;
+    int samples = 0;
 
     uint8_t secondsToWrite;
     uint32_t bytesWritten;

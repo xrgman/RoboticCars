@@ -5,13 +5,13 @@
 Respeaker6MicArray::Respeaker6MicArray(PinName buttonPin, I2C *i2c, Communication *comm)
     : button(buttonPin),
       ac101(i2c, RESPEAKER6MIC_AC101_ADDRESS, RESPEAKER6MIC_AC101_AMP_EN_PIN),
-      ac108_1(i2c, RESPEAKER6MIC_AC108_ADDRESS_1),
-      ac108_2(i2c, RESPEAKER6MIC_AC108_ADDRESS_2),
+      ac108_1(i2c, RESPEAKER6MIC_AC108_ADDRESS_1, 0),
+      ac108_2(i2c, RESPEAKER6MIC_AC108_ADDRESS_2, 1),
       i2s(RESPEAKER6MIC_I2S_SD, RESPEAKER6MIC_I2S_W, RESPEAKER6MIC_I2S_CLK, comm)
 {
     communication = comm;
 
-    //Setting default values:
+    // Setting default values:
     sampleRate = I2S_SAMPLE_RATE;
     wordSizeInput = I2S_WORDSIZE_INPUT;
     wordSizeOuput = I2S_WORDSIZE_OUTPUT;
@@ -30,7 +30,7 @@ bool Respeaker6MicArray::checkDeviceOperation(Communication *communication_proto
     ok &= ac108_1.checkDeviceOperation(communication_protocol);
     ok &= ac108_2.checkDeviceOperation(communication_protocol);
 
-    //Saving old configuration:
+    // Saving old configuration:
     SampleRate oldSampleRate = sampleRate;
     WordSize oldWordSizeInput = wordSizeInput;
     WordSize oldWordSizeOutput = wordSizeOuput;
@@ -43,7 +43,7 @@ bool Respeaker6MicArray::checkDeviceOperation(Communication *communication_proto
 
     i2s.write(data_beep, nrElementsBeep);
 
-    //Waiting and then restoring values:
+    // Waiting and then restoring values:
     HAL_Delay(1000);
 
     ok &= configure(oldSampleRate, oldWordSizeInput, oldWordSizeOutput, oldNumChannelsInput, oldNumChannelsOutput);
@@ -51,30 +51,33 @@ bool Respeaker6MicArray::checkDeviceOperation(Communication *communication_proto
     return ok;
 }
 
-void Respeaker6MicArray::initialize()
+bool Respeaker6MicArray::initialize()
 {
     // Initializing AC101 chip:
     if (!ac101.initialize())
     {
         communication->sendDebugMessage("Failed to start AC101\n");
 
-        return;
+        return false;
     }
 
     // Initializing AC108 chips:
     // When I initialize both, I2S stops working (ISR not getting called anymore) -> Reset required
-    // if (!ac108_1.initialize())
-    // {
-    //     communication->sendDebugMessage("Failed to start AC108 - 1\n");
+    // Problem is within the respeaker module, thats the one that needs resetting :)
+    // Resetting the ac108 properly also fixes it, so something is wrong during initalisation
+    if (!ac108_1.initialize(SAMPLE_RATE_44100, WORD_SIZE_16_BITS, NUM_CHANNELS_8))
+    {
+        communication->sendDebugMessage("Failed to start AC108 - 1\n");
 
-    //     return;
-    // }
+        return false;
+    }
 
-    // if(!ac108_2.initialize()) {
-    //     communication->sendDebugMessage("Failed to start AC108 - 2\n");
+    if (!ac108_2.initialize(SAMPLE_RATE_44100, WORD_SIZE_16_BITS, NUM_CHANNELS_8))
+    {
+        communication->sendDebugMessage("Failed to start AC108 - 2\n");
 
-    //     return;
-    // }
+        return false;
+    }
 
     // ac108_2.startCapture44();
 
@@ -93,8 +96,10 @@ void Respeaker6MicArray::initialize()
     {
         communication->sendDebugMessage("Failed to configure Respeaker module\n");
 
-        return;
+        return false;
     }
+
+    return true;
 }
 
 /// @brief Set the callback function for when the button on the Respeaker board is clicked.
@@ -146,7 +151,7 @@ bool Respeaker6MicArray::configure(SampleRate sampleRate, WordSize wordSizeInput
 {
     bool ok = true;
 
-    //Saving values for later:
+    // Saving values for later:
     this->sampleRate = sampleRate == SAMPLE_RATE_CURRENT ? this->sampleRate : sampleRate;
     this->wordSizeInput = wordSizeInput == WORD_SIZE_CURRENT ? this->wordSizeInput : wordSizeInput;
     this->wordSizeOuput = wordSizeOuput == WORD_SIZE_CURRENT ? this->wordSizeOuput : wordSizeOuput;
@@ -221,6 +226,7 @@ bool Respeaker6MicArray::configure(SampleRate sampleRate, WordSize wordSizeInput
     case SAMPLE_RATE_CURRENT:
         // TODO get from ac101 and ac108
         sampleRateI2S = i2s.getSampleRate();
+        break;
     case SAMPLE_RATE_8000:
         sampleRateAC101 = AC101::SAMPLE_RATE_8000;
         sampleRateI2S = SAI_AUDIO_FREQUENCY_8K;
@@ -271,11 +277,18 @@ bool Respeaker6MicArray::configure(SampleRate sampleRate, WordSize wordSizeInput
     return ok;
 }
 
-/// @brief Get pointer to the read buffer of I2S.
+/// @brief Get pointer to the 16 bit read buffer of I2S.
 /// @return Pointer to the read buffer.
-uint32_t *Respeaker6MicArray::getPointerToReadBuffer()
+uint16_t *Respeaker6MicArray::getRxBuffer16()
 {
-    return i2s.getPointerToReadBuffer();
+    return i2s.getRxBuffer16();
+}
+
+/// @brief Get pointer to the 32 read buffer of I2S.
+/// @return Pointer to the read buffer.
+uint32_t *Respeaker6MicArray::getRxBuffer32()
+{
+    return i2s.getRxBuffer32();
 }
 
 //**************************************
